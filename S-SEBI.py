@@ -52,9 +52,6 @@ z = 250
 #Temperatura do ar(K)
 Ta = 280
 
-#radiacao de onda curta incidente
-Rsol_inc = 1367*math.cos(angle)*(0.75 +0.00002*z)*d
-
 #radiacao de onda longa incidente
 Ea = 0.85 * math.pow(-1*math.log((0.75 +0.00002*z)),0.09)
 Rol_atm = Ea * 0.0000000567 * Ta*Ta*Ta*Ta
@@ -90,7 +87,6 @@ y2 =0
 y3 =0
 y4 =0
 
-	
 #Radiancia e reflectancia
 banda = img.GetRasterBand(1).ReadAsArray()
 L1 = a1 + ((b1 - a1)/255)* banda
@@ -149,9 +145,47 @@ AlSuper = (AlPlan - 0.03)* (1/((0.75 +0.00002*z)*(0.75 +0.00002*z)))
 AlPlan = None
 EscreveResult(AlSuper,'AlbedoSuperficie.tif')
 
+#indice de Vegetacao da Diferenca Normalizada
+NDVI = (P4 - P3) / (P4+ P3)	
+EscreveResult(NDVI,'NDVI.tif')
+	
+#indice de Vegetacao Ajustado para os Efeitos do Solo
+SAVI = ((1+0.5)*(P4-P3))/(0.5+P4+P3)
+EscreveResult(SAVI,'SAVI.tif')
+P4 = None
+P3 = None
+
+#Indice area foliar
+IAF = (numpy.log(0.69 - numpy.divide(SAVI,0.59))/0.91) * (-1) 
+EscreveResult(IAF,'IAF.tif')
+SAVI = None
+
+#Emissividade
+Enb = 0.97 + 0.00331* IAF
+E0 = 0.95 + 0.01 * IAF
+IAF = None
+
 #Temperatura satelite (K)
-T = 1260.56/(numpy.log((607.76/L6) +1))
+T = 1260.56/(numpy.log((Enb*607.76/L6) +1))
+L6 = None
 EscreveResult(T,'Temperatura.tif')
+Enb = None
+
+#fluxo radiacao termal emitida 
+Frt_emit= E0*0.0000000567*T*T*T*T		
+
+#Radiacao onda curta incidente
+Rs = 1367 * math.cos(angle)*(0.75 +0.00002*z)*d
+		
+#Saldo da radiacao
+Rn = (1 - AlSuper)*Rs + Rol_atm - Frt_emit - (1 - E0)*Rol_atm
+Frt_emit = None
+EscreveResult(Rn,'SaldoRadiacao.tif')
+
+#Fluxo de calor no solo	
+G = (T*(0.32 + (0.62*AlSuper))*(1-0.978*numpy.power(NDVI,2)))*Rn
+EscreveResult(G,'FluxoDeCalorNoSolo.tif')
+NDVI = None
 
 #Teste para limites
 for i in range(0,linhas):
@@ -188,55 +222,9 @@ m2 = (y4-y3)/(x2-x1)
 c1 = (x2*y1 - x1*y2)/(x2-x1)
 c2 = (x2*y3 - x1*y4)/(x2-x1)
 
-#indice de Vegetacao da Diferenca Normalizada
-NDVI = (P4 - P3) / (P4+ P3)	
-EscreveResult(NDVI,'NDVI.tif')
-	
-#indice de Vegetacao Ajustado para os Efeitos do Solo
-SAVI = ((1+0.5)*(P4-P3))/(0.5+P4+P3)
-EscreveResult(SAVI,'SAVI.tif')
-P4 = None
-P3 = None
-
-#Indice area foliar
-IAF = (numpy.log(0.69 - numpy.divide(SAVI,0.59))/0.91) * (-1) 
-EscreveResult(IAF,'IAF.tif')
-SAVI = None
-IAF = None
-
-#radiacao de onda longa emitida 
-Rol_emit= 0.0000000567*T*T*T*T	
-T = None	
-L = 0.607 * Rol_emit + 170.405
-
-#temperatura radiativa da superficie
-T0_R  = numpy.sqrt(numpy.sqrt(numpy.divide(L,0.0000000567)))	
-L = None
-
-#Correcao da temperatura radiativa
-Pv = (NDVI - 0.1)/(0.8 - 0.1) 					
-E0 = 0.99 * Pv + 0.91*(1 - Pv) + 4*0.02*Pv*(1 - Pv)
-T0 = numpy.power(((T0_R * T0_R * T0_R * T0_R)/E0),0.25)
-Pv = None
-T0_R = None
-
-#radiacao de onda longa emitida atualizado
-Rol_emit= E0*0.0000000567*T0*T0*T0*T0
-E0 = None
-		
-#Saldo da radiacao
-Rn = Rsol_inc*(1-AlSuper) + Rol_atm - Rol_emit	
-Rol_atm = None
-Rol_emit = None
-EscreveResult(Rn,'SaldoRadiacao.tif')
-
-#Fluxo de calor no solo	
-G = ((T0 - 273.15)*(0.32 + (0.62*AlSuper))*(1-0.978*numpy.power(NDVI,2)))*Rn
-EscreveResult(G,'FluxoDeCalorNoSolo.tif')
-	
 #fracao evaporativa
-V_virado = (c1 + m1*AlSuper) - T0/(c1 - c2 + (m1 - m2)*AlSuper)
-T0 = None
+V_virado = ((c1 + m1*AlSuper) - T)/(c1 - c2 + (m1 - m2)*AlSuper)
+T = None
 AlSuper = None
 EscreveResult(V_virado,'FracaoEvaporativa.tif')
 
@@ -248,9 +236,9 @@ H = None
 #Fluxo calor latente
 LE = V_virado * (Rn - G)
 EscreveResult(LE,'FluxoCalorLatente.tif')
+
 G = None
 Rn = None
-LE = None
-
+V_virado = None
 fim = time.time()
 print 'Tempo total: '+str(fim - inicio)
