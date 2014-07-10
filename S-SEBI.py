@@ -80,7 +80,7 @@ def EscreveResult(arq, nome):
 	outBand.WriteArray(arq,0,0)
 	outDataSet = None
 	
-#Pontos p/ lim
+#Pontos p/ lim superior e inferior
 l1 =[]
 l2 =[]
 x1 = 0.1
