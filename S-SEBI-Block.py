@@ -102,4 +102,4 @@ saidaAlbedoPlanetario = None
 
 fim = time.time()
 
-print 'Tempo total: '+str(fim - inicio)+' segundos'
+print 'Tempo total: '+str(fim - inicio)+' segundos.'
