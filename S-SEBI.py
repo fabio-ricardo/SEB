@@ -10,6 +10,8 @@ gdal.AllRegister()
 driver = gdal.GetDriverByName('GTiff')
 
 
+
+
 #Radiancias espectrais min. e max. em cada banda(surface albedo)
 a1 = -1.52
 b1 = 193.0
