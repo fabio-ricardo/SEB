@@ -18,9 +18,16 @@ if  entrada is None:
 linhas = entrada.RasterYSize
 colunas = entrada.RasterXSize
 NBandas = entrada.RasterCount
-driver = entrada.GetDriver()
+driverEntrada = entrada.GetDriver()
 
-print 'linhas:',linhas,' colunas:',colunas,'bandas:',NBandas,'driver:',driver.ShortName
+print 'linhas:',linhas,' colunas:',colunas,'bandas:',NBandas,'driver:',driverEntrada.ShortName
+
+saidaAlbedoPlanetario = driver.Create('albedoPlanetario.tif',colunas,linhas,1,GDT_Float64)
+if saidaAlbedoPlanetario is None:
+    print 'Erro ao criar o arquivo: ' + 'albedoPlanetario.tif'
+    sys.exit(1)
+
+bandaAlbedoPlan = saidaAlbedoPlanetario.GetRasterBand(1)
 
 #----------
 pi = math.pi
@@ -73,6 +80,12 @@ for k in range(1,NBandas+1):
 
                 bandaReflectancia.WriteArray(reflectancia,j,i)
 
+                albedoPlan = reflectancia * descBandas[k][7]
+
+                if (k != 1):
+                    albedoPlan = albedoPlan + bandaAlbedoPlan.ReadAsArray(j,i,lerColunas,lerLinhas)
+
+                bandaAlbedoPlan.WriteArray(albedoPlan,j,i)
 
             bandaRadiancia.WriteArray(radiancia,j,i)
             #----------
@@ -84,6 +97,8 @@ for k in range(1,NBandas+1):
     saidaReflectancia = None
 
 entrada = None
+bandaAlbedoPlan = None
+saidaAlbedoPlanetario = None
 
 fim = time.time()
 
