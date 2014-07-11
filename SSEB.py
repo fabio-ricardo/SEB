@@ -49,14 +49,13 @@ d = 1+0.033*math.cos((2*math.pi*212)/365)
 #altitude do pixel(m)
 z = 250
 
-#Temperatura do ar(K)
-Ta = 280
+#Temperatura do ar()
+Ta = 25
 
-#radiacao de onda longa incidente
-Ea = 0.85 * math.pow(-1*math.log((0.75 +0.00002*z)),0.09)
-Rol_atm = Ea * 0.0000000567 * Ta*Ta*Ta*Ta
+#Velocidade do vento(m/s)
+u2 = 2.77
 
-#Abrindo imagem empilhada e separando as bandas
+#Abrindo imagem empilhada
 nomeFile = 'mergido.tiff'
 img = gdal.Open(nomeFile,GA_ReadOnly)
 if img is None:
@@ -67,26 +66,15 @@ colunas = img.RasterXSize #pega o numero de colunas
 linhas = img.RasterYSize #pega o numero de linhas
 
 #Cria pasta para os resultados
-os.mkdir('ResultadosProcessamento-'+nomeFile)
+os.mkdir('SSEB Resultados-'+nomeFile)
 
 #Funcao para escrever imagem
 def EscreveResult(arq, nome):
-	outDataSet = driver.Create('ResultadosProcessamento-'+nomeFile+'/'+nome,colunas,linhas,1,GDT_Float64)
+	outDataSet = driver.Create('SSEB Resultados-'+nomeFile+'/'+nome,colunas,linhas,1,GDT_Float64)
 	outBand = outDataSet.GetRasterBand(1)
 	outBand.WriteArray(arq,0,0)
 	outDataSet = None
 	
-#Pontos p/ lim superior e inferior
-l1 =[]
-l2 =[]
-x1 = 0.1
-x2 = 0.9
-y1 =0
-y2 =0
-
-y3 =0
-y4 =0
-
 #Radiancia e reflectancia
 banda = img.GetRasterBand(1).ReadAsArray()
 L1 = a1 + ((b1 - a1)/255)* banda
@@ -156,7 +144,7 @@ P4 = None
 P3 = None
 
 #Indice area foliar
-IAF = (numpy.log((0.69 - SAVI)/0.59))/0.91 * (-1) 
+IAF = (numpy.log((0.69 - SAVI)/ 0.59)/0.91) * (-1) 
 EscreveResult(IAF,'IAF.tif')
 SAVI = None
 
@@ -183,62 +171,56 @@ Frt_emit = None
 EscreveResult(Rn,'SaldoRadiacao.tif')
 
 #Fluxo de calor no solo	
-G = (T*(0.0038 + (0.0074*AlSuper))*(1-0.978*numpy.power(NDVI,2)))*Rn
+G = ((T - 273.15)*(0.0038 + (0.0074*AlSuper))*(1-0.98*numpy.power(NDVI,4)))*Rn
 EscreveResult(G,'FluxoDeCalorNoSolo.tif')
+
+#Transformando matriz em array unidimensional
+T = T.flatten()
+NDVI = NDVI.flatten()
+
+#Encontrando 3 pixels ancoras quentes e frios
+TH = 0
+TC = 0
+
+for i in range(0,3):
+	TH += T[numpy.nanargmin(NDVI)]
+	NDVI[numpy.nanargmin(NDVI)] = None
+	
+	TC += T[numpy.nanargmax(NDVI)]
+	NDVI[numpy.nanargmax(NDVI)] = None
+
 NDVI = None
+TH /= 3
+TC /= 3
+T = numpy.reshape(T,(linhas,colunas))
 
-#Teste para limites
-for i in range(0,linhas):
-	for j in range(0,colunas):
-		if AlSuper[i,j] <= 0.2:
-			l1.append(T[i,j])
-				
-		elif AlSuper[i,j] >= 0.75:
-			l2.append(T[i,j])
-			
-
-#Encontrando pontos lSup(x1,y1) (x2,y2) e lInf(x1,y3) (x2,y4)
-l1.sort()
-l2.sort()
-for i in range(len(l1) -20, len(l1)):
-	y1 += l1[i] 
-y1 /= 20
-
-for i in range(0,20):
-	y3 += l1[i]
-y3 /= 20
-
-for i in range(len(l2) -20, len(l2)):
-	y2 += l2[i]
-y2 /= 20
-
-for i in range(0,20):
-	y4 += l2[i]
-y4 /= 20
-
-#Coeficientes das retas
-m1 = (y2-y1)/(x2-x1)
-m2 = (y4-y3)/(x2-x1)
-c1 = (x2*y1 - x1*y2)/(x2-x1)
-c2 = (x2*y3 - x1*y4)/(x2-x1)
-
-#fracao evaporativa
-V_virado = ((c1 + m1*AlSuper) - T)/(c1 - c2 + (m1 - m2)*AlSuper)
+#Fracao de evapotranspiracao
+ETf = (TH - T)/(TH - TC)
+EscreveResult(ETf,'FracaoEvapotranspiracao.tif')
 T = None
-AlSuper = None
-EscreveResult(V_virado,'FracaoEvaporativa.tif')
 
-#Fluxo calor sensivel
-H = (1- V_virado)*(Rn - G)
-EscreveResult(H,'FluxoCalorSensivel.tif')
-H = None
+#Slope Vapour Pressure Curve 
+delta = (2504 * numpy.exp((17.27* Ta)/(Ta + 237.3)))/((Ta + 237.3)*(Ta + 237.3))
 
-#Fluxo calor latente
-LE = V_virado * (Rn - G)
-EscreveResult(LE,'FluxoCalorLatente.tif')
+#Calor latente de vaporizacao
+l = 2.501 - (0.002361)*Ta
 
-G = None
-Rn = None
-V_virado = None
+#Pressao atmosferica
+P = 101.3* math.pow((273.15 + Ta - 0.0065*z)/(273.15 + Ta), 5.26)
+
+#Psychrometric constant
+gama = 0.00163*P/l
+
+es = 6.1078 * math.pow(10,(7.5*Ta)/(237.3 + Ta))
+Td = 
+ea = 6.1078 * math.pow(10,(7.5*Td)/(237.3 + Td))
+
+#Evapotranspiracao atual
+ET0 = 0.408 * delta * (Rn - G) + gama * (900/(Ta + 273.15))*u2*(es - ea) /(delta + gama*(1 + 0.34*u2))
+ETa = ETf * ET0
+EscreveResult(ETa,'EvapotranspiracaoAtual.tif')
+ETf = None
+ETa = None
+
 fim = time.time()
 print 'Tempo total: '+str(fim - inicio)
