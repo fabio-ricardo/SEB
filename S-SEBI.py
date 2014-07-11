@@ -160,8 +160,9 @@ IAF = None
 #Temperatura satelite (K)
 T = 1260.56/(numpy.log((Enb*607.76/L6) +1))
 L6 = None
-EscreveResult(T,'Temperatura.tif')
 Enb = None
+EscreveResult(T,'Temperatura.tif')
+
 
 #fluxo radiacao termal emitida
 Frt_emit= E0*0.0000000567*T*T*T*T
@@ -172,6 +173,7 @@ Rs = 1367 * math.cos(angle)*(0.75 +0.00002*z) * d
 #Saldo da radiacao
 Rn = (1 - AlSuper)*Rs + Rol_atm - Frt_emit - (1 - E0)*Rol_atm
 Frt_emit = None
+E0 = None
 EscreveResult(Rn,'SaldoRadiacao.tif')
 
 #Fluxo de calor no solo
