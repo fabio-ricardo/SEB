@@ -183,7 +183,7 @@ Frt_emit = None
 EscreveResult(Rn,'SaldoRadiacao.tif')
 
 #Fluxo de calor no solo	
-G = ((T - 273.15)*(0.32 + (0.62*AlSuper))*(1-0.978*numpy.power(NDVI,2)))*Rn
+G = ((T - 273.15)*(0.0038 + (0.0074*AlSuper))*(1-0.98*numpy.power(NDVI,4)))*Rn
 EscreveResult(G,'FluxoDeCalorNoSolo.tif')
 NDVI = None
 
@@ -221,6 +221,12 @@ m1 = (y2-y1)/(x2-x1)
 m2 = (y4-y3)/(x2-x1)
 c1 = (x2*y1 - x1*y2)/(x2-x1)
 c2 = (x2*y3 - x1*y4)/(x2-x1)
+
+print m1
+print m2
+print c1
+print c2
+
 
 #fracao evaporativa
 V_virado = ((c1 + m1*AlSuper) - T)/(c1 - c2 + (m1 - m2)*AlSuper)
