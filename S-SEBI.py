@@ -156,7 +156,7 @@ P4 = None
 P3 = None
 
 #Indice area foliar
-IAF = (numpy.log(0.69 - numpy.divide(SAVI,0.59))/0.91) * (-1) 
+IAF = (numpy.log((0.69 - SAVI)/ 0.59)/0.91) * (-1) 
 EscreveResult(IAF,'IAF.tif')
 SAVI = None
 
@@ -183,7 +183,7 @@ Frt_emit = None
 EscreveResult(Rn,'SaldoRadiacao.tif')
 
 #Fluxo de calor no solo	
-G = (T*(0.32 + (0.62*AlSuper))*(1-0.978*numpy.power(NDVI,2)))*Rn
+G = ((T - 273.15)*(0.32 + (0.62*AlSuper))*(1-0.978*numpy.power(NDVI,2)))*Rn
 EscreveResult(G,'FluxoDeCalorNoSolo.tif')
 NDVI = None
 
@@ -240,5 +240,7 @@ EscreveResult(LE,'FluxoCalorLatente.tif')
 G = None
 Rn = None
 V_virado = None
+LE = None
+
 fim = time.time()
 print 'Tempo total: '+str(fim - inicio)
