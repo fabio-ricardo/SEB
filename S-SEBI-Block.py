@@ -40,6 +40,9 @@ radOndaCurtaInci = S * cosZ * dr * tsw
 Ea = 0.85 * numpy.power(-1 * numpy.log(tsw),0.09)
 Ta = 295
 radOndaLongaInci = Ea * constSB * (Ta*Ta*Ta*Ta)
+x1 = 0.1
+x2 = 0.9
+x2x1 = x2 - x1
 
 #----------
 
@@ -153,11 +156,10 @@ for i in range(0,linhas,yBlockSize):
         ndvi = (reflectanciaB4 - reflectanciaB3) / (reflectanciaB4 + reflectanciaB3)
         bandaNDVI.WriteArray(ndvi,j,i)
 
-
         albedoSuperficie = (albedoPlanetrio - ap) * p2
         bandaAlbedoSuper.WriteArray(albedoSuperficie,j,i)
-        albedoPlanetrio = None
 
+        albedoPlanetrio = None
 
         savi = ((1 + L) * (reflectanciaB4 - reflectanciaB3)) / (L + (reflectanciaB4 + reflectanciaB3))
         bandaSAVI.WriteArray(savi,j,i)
@@ -165,12 +167,10 @@ for i in range(0,linhas,yBlockSize):
         reflectanciaB4 = None
         reflectanciaB3 = None
 
-
         iaf = -1 * (numpy.log((0.69 - savi) / 0.59) / 0.91)
         bandaIAF.WriteArray(iaf,j,i)
+
         savi = None
-
-
 
         ENB = 0.97 + 0.00331 * iaf
         E0 = 0.95 + 0.01* iaf
@@ -179,18 +179,15 @@ for i in range(0,linhas,yBlockSize):
 
         temperaturaSuperficie = K2 / numpy.log(((ENB * K1) / radianciaB6) + 1)
         bandaTempSuper.WriteArray(temperaturaSuperficie,j,i)
+
         radianciaB6 = None
-
         ENB = None
-
-
 
         radOndaLongaEmi = (E0 * constSB) * (temperaturaSuperficie*temperaturaSuperficie*\
                                             temperaturaSuperficie*temperaturaSuperficie)
 
         saldoRadiacao = radOndaCurtaInci * (1 - albedoSuperficie) - radOndaLongaEmi +\
                         radOndaLongaInci - (1 - E0) * radOndaLongaInci
-
         bandaSaldoRad.WriteArray(saldoRadiacao,j,i)
 
         E0 = None
@@ -199,10 +196,56 @@ for i in range(0,linhas,yBlockSize):
         fluxoCalSolo = ((temperaturaSuperficie - 273.15) *\
                        (0.0038 + (0.0074 * albedoSuperficie))\
                        * (1 - (0.98 * (ndvi*ndvi*ndvi*ndvi)))) * saldoRadiacao
-
         bandaFluxoCalSolo.WriteArray(fluxoCalSolo,j,i)
 
         ndvi = None
+
+        #----------
+
+        maskAlbedoSuper = albedoSuperficie <= 0.2
+        limiteLadoEsq = temperaturaSuperficie[maskAlbedoSuper]
+
+        maskAlbedoSuper = albedoSuperficie >= 0.75
+        limiteLadoDir = temperaturaSuperficie[maskAlbedoSuper]
+
+        maskAlbedoSuper = None
+
+        limSupEsq = 0.0
+        limInfEsq = 0.0
+
+        limSupDir = 0.0
+        limInfDir = 0.0
+
+        for l in range(20):
+            aux = numpy.nanargmax(limiteLadoEsq)
+            limSupEsq = limSupEsq + limiteLadoEsq[aux]
+            limiteLadoEsq[aux] = numpy.nan
+
+            aux = numpy.nanargmin(limiteLadoEsq)
+            limInfEsq = limInfEsq + limiteLadoEsq[aux]
+            limiteLadoEsq[aux] = numpy.nan
+
+            #----------
+
+            aux = numpy.nanargmax(limiteLadoDir)
+            limSupDir = limSupDir + limiteLadoDir[aux]
+            limiteLadoDir[aux] = numpy.nan
+
+            aux = numpy.nanargmin(limiteLadoDir)
+            limInfDir = limInfDir + limiteLadoDir[aux]
+            limiteLadoDir[aux] = numpy.nan
+
+        limiteLadoEsq = None
+        limiteLadoDir = None
+
+        limSupEsq = limSupEsq / 20
+        limInfEsq = limInfEsq / 20
+
+        limSupDir = limSupDir / 20
+        limInfDir = limInfDir / 20
+
+        #----------
+
         temperaturaSuperficie = None
         saldoRadiacao = None
         albedoSuperficie = None
