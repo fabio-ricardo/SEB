@@ -11,7 +11,7 @@ driver.Register()
 nomeArquivoEntrada = 'empilhada.tif'
 
 entrada = gdal.Open(nomeArquivoEntrada,GA_ReadOnly)
-if entrada is None:
+if  entrada is None:
     print 'Erro ao abrir o arquivo: ' + nomeArquivoEntrada
     sys.exit(1)
 
@@ -217,6 +217,8 @@ for i in range(0,linhas,yBlockSize):
         limiteLadoDir = temperaturaSuperficie[maskAlbedoSuper]
 
         maskAlbedoSuper = None
+        albedoSuperficie = None
+        temperaturaSuperficie = None
 
         limiteLadoEsq = numpy.sort(limiteLadoEsq) ###--- OS VALORES ESTAO DIFERENTES DO FABIO.
         limiteLadoDir = numpy.sort(limiteLadoDir) ###--- OS VALORES ESTAO DIFERENTES DO FABIO.
@@ -255,11 +257,6 @@ for i in range(0,linhas,yBlockSize):
 
         #---------- ^^^^^^^^^^^ATÉ AQUI
 
-        albedoSuperficie = None
-        temperaturaSuperficie = None
-
-        #----------
-
 numpy.seterr(all='warn')
 
 #----------
@@ -272,23 +269,14 @@ bandaSAVI = None
 saidaSAVI = None
 bandaIAF = None
 saidaIAF = None
-#----------
-bandaAlbedoSuper = None
-saidaAlbedoSuper = None
-bandaTempSuper = None
-saidaTempSuper = None
-bandaSaldoRad = None
-saidaSaldoRad = None
-bandaFluxoCalSolo = None
-saidaFluxoCalSolo = None
 
 #---------- REVISAR DAKI PRA BAIXO
 
-limSupEsq = limSupEsq / 20
-limInfEsq = limInfEsq / 20
+limSupEsq = numpy.sum(limSupEsq) / 20
+limInfEsq = numpy.sum(limInfEsq) / 20
 
-limSupDir = limSupDir / 20
-limInfDir = limInfDir / 20
+limSupDir = numpy.sum(limSupDir) / 20
+limInfDir = numpy.sum(limInfDir) / 20
 
 m1 = (limSupDir - limSupEsq) / x2x1
 m2 = (limInfDir - limInfEsq) / x2x1
@@ -315,38 +303,9 @@ if saidaFluxCalLaten is None:
 
 #----------
 
-saidaAlbedoSuper = gdal.Open('albedoSuperficie.tif',GA_ReadOnly)
-if saidaAlbedoSuper is None:
-    print 'Erro ao abrir o arquivo: ' + 'albedoSuperficie.tif'
-    sys.exit(1)
-
-saidaTempSuper = gdal.Open('temperatura_superficie.tif',GA_ReadOnly)
-if saidaTempSuper is None:
-    print 'Erro ao abrir o arquivo: ' + 'temperatura_superficie.tif'
-    sys.exit(1)
-
-saidaSaldoRad = gdal.Open('saldoRadiacao.tif',GA_ReadOnly)
-if saidaSaldoRad is None:
-    print 'Erro ao abrir o arquivo: ' + 'saldoRadiacao.tif'
-    sys.exit(1)
-
-saidaFluxoCalSolo = gdal.Open('fluxoCalorSolo.tif',GA_ReadOnly)
-if saidaFluxoCalSolo is None:
-    print 'Erro ao abrir o arquivo: ' + 'fluxoCalorSolo.tif'
-    sys.exit(1)
-
-#----------
-
 bandaFracEvapo = saidaFracEvapo.GetRasterBand(1)
 bandaFluxCalSensi = saidaFluxCalSensi.GetRasterBand(1)
 bandaFluxCalLaten = saidaFluxCalLaten.GetRasterBand(1)
-
-#----------
-
-bandaAlbedoSuper = saidaAlbedoSuper.GetRasterBand(1)
-bandaTempSuper = saidaTempSuper.GetRasterBand(1)
-bandaSaldoRad = saidaSaldoRad.GetRasterBand(1)
-bandaFluxoCalSolo = saidaFluxoCalSolo.GetRasterBand(1)
 
 #----------
 
