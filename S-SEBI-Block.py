@@ -11,7 +11,7 @@ driver.Register()
 nomeArquivoEntrada = 'empilhada.tif'
 
 entrada = gdal.Open(nomeArquivoEntrada,GA_ReadOnly)
-if  entrada is None:
+if entrada is None:
     print 'Erro ao abrir o arquivo: ' + nomeArquivoEntrada
     sys.exit(1)
 
@@ -87,6 +87,12 @@ bandaEntrada = numpy.empty([NBandas+1],dtype=osgeo.gdal.Band)
 bandaEntrada[0] = 0
 p1 = numpy.empty([NBandas+1],dtype=numpy.float64)
 p1[0] = 0
+
+limSupEsq = numpy.zeros([20],dtype=numpy.float64)
+limInfEsq = numpy.zeros([20],dtype=numpy.float64)
+
+limSupDir = numpy.zeros([20],dtype=numpy.float64)
+limInfDir = numpy.zeros([20],dtype=numpy.float64)
 
 # ----------
 
@@ -199,8 +205,10 @@ for i in range(0,linhas,yBlockSize):
         bandaFluxoCalSolo.WriteArray(fluxoCalSolo,j,i)
 
         ndvi = None
+        saldoRadiacao = None
+        fluxoCalSolo = None
 
-        #----------
+        #---------- REVISAR DAKI PRA BAIXO
 
         maskAlbedoSuper = albedoSuperficie <= 0.2
         limiteLadoEsq = temperaturaSuperficie[maskAlbedoSuper]
@@ -210,46 +218,45 @@ for i in range(0,linhas,yBlockSize):
 
         maskAlbedoSuper = None
 
-        limSupEsq = 0.0
-        limInfEsq = 0.0
+        limiteLadoEsq = numpy.sort(limiteLadoEsq) ###--- OS VALORES ESTAO DIFERENTES DO FABIO.
+        limiteLadoDir = numpy.sort(limiteLadoDir) ###--- OS VALORES ESTAO DIFERENTES DO FABIO.
 
-        limSupDir = 0.0
-        limInfDir = 0.0
+        limSupEsqAux = limiteLadoEsq[::-1][0:20]
+        limInfEsqAux = limiteLadoEsq[0:20]
 
-        for l in range(20):
-            aux = numpy.nanargmax(limiteLadoEsq)
-            limSupEsq = limSupEsq + limiteLadoEsq[aux]
-            limiteLadoEsq[aux] = numpy.nan
-
-            aux = numpy.nanargmin(limiteLadoEsq)
-            limInfEsq = limInfEsq + limiteLadoEsq[aux]
-            limiteLadoEsq[aux] = numpy.nan
-
-            #----------
-
-            aux = numpy.nanargmax(limiteLadoDir)
-            limSupDir = limSupDir + limiteLadoDir[aux]
-            limiteLadoDir[aux] = numpy.nan
-
-            aux = numpy.nanargmin(limiteLadoDir)
-            limInfDir = limInfDir + limiteLadoDir[aux]
-            limiteLadoDir[aux] = numpy.nan
+        limSupDirAux = limiteLadoDir[::-1][0:20]
+        limInfDirAux = limiteLadoDir[0:20]
 
         limiteLadoEsq = None
         limiteLadoDir = None
 
-        limSupEsq = limSupEsq / 20
-        limInfEsq = limInfEsq / 20
+        for l in range(limSupEsqAux.size):
+            if (limSupEsqAux[l] >= limSupEsq[l]) or (limSupEsq[l] == 0):
+                limSupEsq = numpy.insert(limSupEsq,l,limSupEsqAux[l])
+                limSupEsq = numpy.delete(limSupEsq,limSupEsq.size - 1)
 
-        limSupDir = limSupDir / 20
-        limInfDir = limInfDir / 20
+            if (limInfEsqAux[l] <= limInfEsq[l]) or (limInfEsq[l] == 0):
+                limInfEsq = numpy.insert(limInfEsq,l,limInfEsqAux[l])
+                limInfEsq = numpy.delete(limInfEsq,limInfEsq.size - 1)
 
-        #----------
+        for l in range(limSupDirAux.size):
+            if (limSupDirAux[l] >= limSupDir[l]) or (limSupDir[l] == 0):
+                limSupDir = numpy.insert(limSupDir,l,limSupDirAux[l])
+                limSupDir = numpy.delete(limSupDir,limSupDir.size - 1)
 
-        temperaturaSuperficie = None
-        saldoRadiacao = None
+            if (limInfDirAux[l] <= limInfDir[l]) or (limInfDir[l] == 0):
+                limInfDir = numpy.insert(limInfDir,l,limInfDirAux[l])
+                limInfDir = numpy.delete(limInfDir,limInfDir.size - 1)
+
+        limSupEsqAux = None
+        limInfEsqAux = None
+        limSupDirAux = None
+        limInfDirAux = None
+
+        #---------- ^^^^^^^^^^^ATÉ AQUI
+
         albedoSuperficie = None
-        fluxoCalSolo = None
+        temperaturaSuperficie = None
 
         #----------
 
@@ -259,20 +266,149 @@ numpy.seterr(all='warn')
 
 bandaEntrada = None
 entrada = None
-bandaAlbedoSuper = None
-saidaAlbedoSuper = None
 bandaNDVI = None
 saidaNDVI = None
 bandaSAVI = None
 saidaSAVI = None
 bandaIAF = None
 saidaIAF = None
+#----------
+bandaAlbedoSuper = None
+saidaAlbedoSuper = None
 bandaTempSuper = None
 saidaTempSuper = None
 bandaSaldoRad = None
 saidaSaldoRad = None
 bandaFluxoCalSolo = None
 saidaFluxoCalSolo = None
+
+#---------- REVISAR DAKI PRA BAIXO
+
+limSupEsq = limSupEsq / 20
+limInfEsq = limInfEsq / 20
+
+limSupDir = limSupDir / 20
+limInfDir = limInfDir / 20
+
+m1 = (limSupDir - limSupEsq) / x2x1
+m2 = (limInfDir - limInfEsq) / x2x1
+
+c1 = ((x2 * limSupEsq) - (x1 * limSupDir)) / x2x1
+c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1
+
+#---------- ATÉ AQUI
+
+saidaFracEvapo = driver.Create('fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float64)
+if saidaFracEvapo is None:
+    print 'Erro ao criar o arquivo: ' + 'fracaoEvaporativa.tif'
+    sys.exit(1)
+
+saidaFluxCalSensi = driver.Create('fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float64)
+if saidaFluxCalSensi is None:
+    print 'Erro ao criar o arquivo: ' + 'fluxoCalorSensivel.tif'
+    sys.exit(1)
+
+saidaFluxCalLaten = driver.Create('fluxoCalorLatente.tif',colunas,linhas,1,GDT_Float64)
+if saidaFluxCalLaten is None:
+    print 'Erro ao criar o arquivo: ' + 'fluxoCalorLatente.tif'
+    sys.exit(1)
+
+#----------
+
+saidaAlbedoSuper = gdal.Open('albedoSuperficie.tif',GA_ReadOnly)
+if saidaAlbedoSuper is None:
+    print 'Erro ao abrir o arquivo: ' + 'albedoSuperficie.tif'
+    sys.exit(1)
+
+saidaTempSuper = gdal.Open('temperatura_superficie.tif',GA_ReadOnly)
+if saidaTempSuper is None:
+    print 'Erro ao abrir o arquivo: ' + 'temperatura_superficie.tif'
+    sys.exit(1)
+
+saidaSaldoRad = gdal.Open('saldoRadiacao.tif',GA_ReadOnly)
+if saidaSaldoRad is None:
+    print 'Erro ao abrir o arquivo: ' + 'saldoRadiacao.tif'
+    sys.exit(1)
+
+saidaFluxoCalSolo = gdal.Open('fluxoCalorSolo.tif',GA_ReadOnly)
+if saidaFluxoCalSolo is None:
+    print 'Erro ao abrir o arquivo: ' + 'fluxoCalorSolo.tif'
+    sys.exit(1)
+
+#----------
+
+bandaFracEvapo = saidaFracEvapo.GetRasterBand(1)
+bandaFluxCalSensi = saidaFluxCalSensi.GetRasterBand(1)
+bandaFluxCalLaten = saidaFluxCalLaten.GetRasterBand(1)
+
+#----------
+
+bandaAlbedoSuper = saidaAlbedoSuper.GetRasterBand(1)
+bandaTempSuper = saidaTempSuper.GetRasterBand(1)
+bandaSaldoRad = saidaSaldoRad.GetRasterBand(1)
+bandaFluxoCalSolo = saidaFluxoCalSolo.GetRasterBand(1)
+
+#----------
+
+for i in range(0,linhas,yBlockSize):
+    if i + yBlockSize < linhas:
+        lerLinhas = yBlockSize
+    else:
+        lerLinhas = linhas - i
+
+    for j in range(0,colunas,xBlockSize):
+        if j + xBlockSize < colunas:
+            lerColunas = xBlockSize
+        else:
+            lerColunas = colunas - j
+
+        #----------
+
+        albedoSuperficie = bandaAlbedoSuper.ReadAsArray(j,i,lerColunas,lerLinhas)
+        temperaturaSuperficie = bandaTempSuper.ReadAsArray(j,i,lerColunas,lerLinhas)
+        saldoRadiacao = bandaSaldoRad.ReadAsArray(j,i,lerColunas,lerLinhas)
+        fluxoCalSolo = bandaFluxoCalSolo.ReadAsArray(j,i,lerColunas,lerLinhas)
+
+        #---------- REVISAR DAKI PRA BAIXO
+
+        fracaoEvaporativa = (c1 + (m1 * albedoSuperficie) - temperaturaSuperficie) / ((c1 - c2) + ((m1 - m2) * albedoSuperficie))
+        bandaFracEvapo.WriteArray(fracaoEvaporativa,j,i)
+
+        albedoSuperficie = None
+        temperaturaSuperficie = None
+
+        fluxoCalorSensivel = (1 - fracaoEvaporativa) * (saldoRadiacao - fluxoCalSolo)
+        bandaFluxCalSensi.WriteArray(fluxoCalorSensivel,j,i)
+
+        fluxoCalorSensivel = None
+
+        fluxoCalorLatente = fracaoEvaporativa * (saldoRadiacao - fluxoCalSolo)
+        bandaFluxCalLaten.WriteArray(fluxoCalorLatente,j,i)
+
+        fluxoCalorLatente = None
+
+        #---------- ATÉ AQUI
+
+        saldoRadiacao = None
+        fluxoCalSolo = None
+        fracaoEvaporativa = None
+
+        #----------
+
+bandaAlbedoSuper = None
+saidaAlbedoSuper = None
+bandaTempSuper = None
+saidaTempSuper = None
+bandaSaldoRad = None
+saidaSaldoRad = None
+bandaFluxoCalSolo = None
+saidaFluxoCalSolo = None
+bandaFracEvapo = None
+saidaFracEvapo = None
+bandaFluxCalSensi = None
+saidaFluxCalSensi = None
+bandaFluxCalLaten = None
+saidaFluxCalLaten = None
 
 #----------
 
