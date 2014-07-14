@@ -33,17 +33,17 @@ b7 = 16.5
 
 #Irradiancia solar espectral em cada banda
 k1 = 1957
-k2 = 1896
+k2 = 1826
 k3 = 1554
 k4 = 1036
 k5 = 215.0
 
 k7 = 80.67
 
-#Angulo zenital (90 graus - elevacao)
+#Angulo zenital (90 graus - elevacao = (43 nessa imagem))
 angle = (43*math.pi)/180
 
-#Razao Dist. entre Terra-Sol (212 dia sequencial)
+#Razao Dist. entre Terra-Sol (212 dia sequencial messa imagem)
 d = 1+0.033*math.cos((2*math.pi*212)/365)
 
 #altitude do pixel(m)
