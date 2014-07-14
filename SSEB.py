@@ -33,7 +33,7 @@ b7 = 16.5
 
 #Irradiancia solar espectral em cada banda
 k1 = 1957
-k2 = 1896
+k2 = 1826
 k3 = 1554
 k4 = 1036
 k5 = 215.0
@@ -54,6 +54,13 @@ Ta = 25
 
 #Velocidade do vento(m/s)
 u2 = 2.77
+
+#Umidade relativa (%)
+UR = 50
+
+#radiacao de onda longa incidente
+Ea = 0.85 * math.pow(-1*math.log((0.75 +0.00002*z)),0.09)
+Rol_atm = Ea * 0.0000000567 * math.pow(Ta +273.15,4)
 
 #Abrindo imagem empilhada
 nomeFile = 'mergido.tiff'
@@ -131,7 +138,6 @@ P7 = None
 #Albedo superficie(deve-se imprimir em porcentagem)
 AlSuper = (AlPlan - 0.03)* (1/((0.75 +0.00002*z)*(0.75 +0.00002*z)))
 AlPlan = None
-EscreveResult(AlSuper,'AlbedoSuperficie.tif')
 
 #indice de Vegetacao da Diferenca Normalizada
 NDVI = (P4 - P3) / (P4+ P3)	
@@ -139,13 +145,11 @@ EscreveResult(NDVI,'NDVI.tif')
 	
 #indice de Vegetacao Ajustado para os Efeitos do Solo
 SAVI = ((1+0.5)*(P4-P3))/(0.5+P4+P3)
-EscreveResult(SAVI,'SAVI.tif')
 P4 = None
 P3 = None
 
 #Indice area foliar
 IAF = (numpy.log((0.69 - SAVI)/ 0.59)/0.91) * (-1) 
-EscreveResult(IAF,'IAF.tif')
 SAVI = None
 
 #Emissividade
@@ -156,8 +160,8 @@ IAF = None
 #Temperatura satelite (K)
 T = 1260.56/(numpy.log((Enb*607.76/L6) +1))
 L6 = None
-EscreveResult(T,'Temperatura.tif')
 Enb = None
+EscreveResult(T,'Temperatura.tif')
 
 #fluxo radiacao termal emitida 
 Frt_emit= E0*0.0000000567*T*T*T*T		
@@ -168,31 +172,64 @@ Rs = 1367 * math.cos(angle)*(0.75 +0.00002*z)*d
 #Saldo da radiacao
 Rn = (1 - AlSuper)*Rs + Rol_atm - Frt_emit - (1 - E0)*Rol_atm
 Frt_emit = None
+E0 = None
 EscreveResult(Rn,'SaldoRadiacao.tif')
 
 #Fluxo de calor no solo	
 G = ((T - 273.15)*(0.0038 + (0.0074*AlSuper))*(1-0.98*numpy.power(NDVI,4)))*Rn
+AlSuper = None
 EscreveResult(G,'FluxoDeCalorNoSolo.tif')
 
-#Transformando matriz em array unidimensional
-T = T.flatten()
-NDVI = NDVI.flatten()
-
 #Encontrando 3 pixels ancoras quentes e frios
-TH = 0
-TC = 0
 
-for i in range(0,3):
-	TH += T[numpy.nanargmin(NDVI)]
-	NDVI[numpy.nanargmin(NDVI)] = None
-	
-	TC += T[numpy.nanargmax(NDVI)]
-	NDVI[numpy.nanargmax(NDVI)] = None
+THot1 = 0
+THot2 = 0
+THot3 = 0
 
+TCold1 = 500
+TCold2 = 500
+TCold3 = 500
+
+NDVIHot1 = 1
+NDVIHot2 = 1
+NDVIHot3 = 1
+
+NDVICold1 = -10
+NDVICold2 = -10
+NDVICold3 = -10
+
+
+for i in range(0,linhas):
+	for j in range(0,colunas):
+		if not(NDVI[i,j] == None):
+			if NDVI[i,j] <= NDVIHot1 and T[i,j] >= THot1:
+				THot3 = THot2
+				NDVIHot3 = NDVIHot2
+				
+				THot2 = THot1
+				NDVIHot2 = NDVIHot1
+				
+				THot1 = T[i,j]
+				NDVIHot1 = NDVI[i,j]
+				
+				NDVI[i,j] = None
+			
+			if not(NDVI[i,j] == None) and NDVI[i,j] >= NDVICold1	and T[i,j] <= TCold1:
+				TCold3 = TCold2
+				NDVICold3 = NDVICold2
+				
+				TCold2 = TCold1
+				NDVICold2 = NDVICold1
+				
+				TCold1 = T[i,j]
+				NDVICold1 = NDVI[i,j]
+				
+				NDVI[i,j] = None
+
+
+TH = (THot1 + THot2 + THot3)/3
+TC = (TCold1 + TCold2 + TCold3)/3
 NDVI = None
-TH /= 3
-TC /= 3
-T = numpy.reshape(T,(linhas,colunas))
 
 #Fracao de evapotranspiracao
 ETf = (TH - T)/(TH - TC)
@@ -205,20 +242,23 @@ delta = (2504 * numpy.exp((17.27* Ta)/(Ta + 237.3)))/((Ta + 237.3)*(Ta + 237.3))
 #Calor latente de vaporizacao
 l = 2.501 - (0.002361)*Ta
 
+
 #Pressao atmosferica
 P = 101.3* math.pow((273.15 + Ta - 0.0065*z)/(273.15 + Ta), 5.26)
 
 #Psychrometric constant
 gama = 0.00163*P/l
 
+#Pressao saturada e atual do vapor
 es = 6.1078 * math.pow(10,(7.5*Ta)/(237.3 + Ta))
-Td = 
+Td = 100 - ((100- UR)/5)
 ea = 6.1078 * math.pow(10,(7.5*Td)/(237.3 + Td))
 
 #Evapotranspiracao atual
-ET0 = 0.408 * delta * (Rn - G) + gama * (900/(Ta + 273.15))*u2*(es - ea) /(delta + gama*(1 + 0.34*u2))
+ET0 = (0.408 * delta * (Rn - G) + gama * (900/(Ta + 273.15))*u2*(es - ea)) /(delta + gama*(1 + 0.34*u2))
 ETa = ETf * ET0
 EscreveResult(ETa,'EvapotranspiracaoAtual.tif')
+ET0 = None
 ETf = None
 ETa = None
 
