@@ -1,387 +1,232 @@
-#coding: utf-8
-import gdal, osgeo, time, numpy, sys, math
+import gdal
 from gdalconst import *
-from constantes import *
+import sys,os,math,time
+import numpy
 
 inicio = time.time()
 
+gdal.AllRegister()
 driver = gdal.GetDriverByName('GTiff')
-driver.Register()
 
-nomeArquivoEntrada = 'empilhada.tif'
+#Radiancias espectrais min. e max. em cada banda(surface albedo)
+a1 = -1.52
+b1 = 193.0
 
-entrada = gdal.Open(nomeArquivoEntrada,GA_ReadOnly)
-if  entrada is None:
-    print 'Erro ao abrir o arquivo: ' + nomeArquivoEntrada
-    sys.exit(1)
+a2 = -2.84
+b2 = 365.0
 
-linhas = entrada.RasterYSize
-colunas = entrada.RasterXSize
-NBandas = entrada.RasterCount
-driverEntrada = entrada.GetDriver()
+a3 = -1.17
+b3 = 264.0
 
-print 'linhas:',linhas,' colunas:',colunas,'bandas:',NBandas,'driver:',driverEntrada.ShortName
+a4 = -1.51
+b4 = 221.0
 
-#----------
+a5 = -0.37
+b5 = 30.2
 
-pi = math.pi
-cosZ = math.cos((pi/2)-56.98100422) # pego do metadata da imagem - SUN_ELEVATION
-dr = 1+0.033*math.cos((272*2*pi)/365) # 29 de setembro de 2011
-ap = 0.03
+a6 = 1.2378
+b6 = 15.303
+
+a7 = -0.15
+b7 = 16.5
+
+#Irradiancia solar espectral em cada banda
+k1 = 1957
+k2 = 1826
+k3 = 1554
+k4 = 1036
+k5 = 215.0
+
+k7 = 80.67
+
+#Angulo zenital
+angle = (math.pi/2)-56.98100422
+
+#Razao Dist. entre Terra-Sol (272 dia sequencial)
+d = 1+0.033*math.cos((2*math.pi*272)/365)
+
+#altitude do pixel(m)
 z = 200
-tsw = 0.75 + 2*0.00001 * z
-p2 = 1 / (tsw * tsw)
-L = 0.5
-K1 = 607.76
-K2 = 1260.56
-constSB = 0.0000000567
-S = 1367
-radOndaCurtaInci = S * cosZ * dr * tsw
-Ea = 0.85 * math.pow(-1 * math.log(tsw),0.09)
+
+#Temperatura do ar(K)
 Ta = 295
-radOndaLongaInci = Ea * constSB * (Ta*Ta*Ta*Ta)
-qtdPontos = 20
+
+#radiacao de onda longa incidente
+Ea = 0.85 * math.pow(-1*math.log((0.75 +0.00002*z)),0.09)
+Rol_atm = Ea * 0.0000000567 * Ta*Ta*Ta*Ta
+
+#Abrindo imagem empilhada e separando as bandas
+nomeFile = 'empilhada.tif'
+img = gdal.Open(nomeFile,GA_ReadOnly)
+if img is None:
+	print 'Nao foi possivel abrir a imagem.'
+	sys.exit(1)
+
+colunas = img.RasterXSize #pega o numero de colunas
+linhas = img.RasterYSize #pega o numero de linhas
+
+#Cria pasta para os resultados
+os.mkdir('ResultadosProcessamento-'+nomeFile)
+
+#Funcao para escrever imagem
+def EscreveResult(arq, nome):
+	outDataSet = driver.Create('ResultadosProcessamento-'+nomeFile+'/'+nome,colunas,linhas,1,GDT_Float64)
+	outBand = outDataSet.GetRasterBand(1)
+	outBand.WriteArray(arq,0,0)
+	outDataSet = None
+
+#Radiancia e reflectancia
+banda = img.GetRasterBand(1).ReadAsArray().astype(numpy.float64)
+L1 = a1 + ((b1 - a1)/255)* banda
+P1 = (math.pi * L1)/(k1 * math.cos(angle)*d)
+banda = None
+AlPlan = 0.293461814725*P1
+L1 = None
+P1 = None
+
+banda = img.GetRasterBand(2).ReadAsArray().astype(numpy.float64)
+L2 = a2 + ((b2 - a2)/255)* banda
+P2 = (math.pi * L2)/(k2 * math.cos(angle)*d)
+banda = None
+AlPlan = AlPlan + 0.273817717776*P2
+L2 = None
+P2 = None
+
+banda = img.GetRasterBand(3).ReadAsArray().astype(numpy.float64)
+L3 = a3 + ((b3 - a3)/255)* banda
+P3 = (math.pi * L3)/(k3 * math.cos(angle)*d)
+banda = None
+AlPlan = AlPlan + 0.233029974493*P3
+L3 = None
+
+banda = img.GetRasterBand(4).ReadAsArray().astype(numpy.float64)
+L4 = a4 + ((b4 - a4)/255)* banda
+P4 = (math.pi * L4)/(k4 * math.cos(angle)*d)
+banda = None
+AlPlan = AlPlan+ 0.155353316328*P4
+L4 = None
+
+banda = img.GetRasterBand(5).ReadAsArray().astype(numpy.float64)
+L5 = a5 + ((b5 - a5)/255)* banda
+P5 = (math.pi * L5)/(k5 * math.cos(angle)*d)
+banda = None
+AlPlan = AlPlan + 0.0322403117863*P5
+L5 = None
+P5 = None
+
+banda = img.GetRasterBand(6).ReadAsArray().astype(numpy.float64)
+L6 = a6 + ((b6 - a6)/255)* banda
+banda = None
+
+banda = img.GetRasterBand(7).ReadAsArray().astype(numpy.float64)
+L7 = a7 + ((b7 - a7)/255)* banda
+P7 = (math.pi * L7)/(k7 * math.cos(angle)*d)
+banda = None
+img = None
+AlPlan = AlPlan+ 0.0120968648921*P7
+L7 = None
+P7 = None
+
+#Albedo superficie(deve-se imprimir em porcentagem)
+AlSuper = (AlPlan - 0.03)* (1/((0.75 +0.00002*z)*(0.75 +0.00002*z)))
+AlPlan = None
+EscreveResult(AlSuper,'AlbedoSuperficie.tif')
+
+#indice de Vegetacao da Diferenca Normalizada
+NDVI = (P4 - P3) / (P4+ P3)
+EscreveResult(NDVI,'NDVI.tif')
+
+#indice de Vegetacao Ajustado para os Efeitos do Solo
+SAVI = ((1+0.5)*(P4-P3))/(0.5+P4+P3)
+EscreveResult(SAVI,'SAVI.tif')
+P4 = None
+P3 = None
+
+numpy.seterr(all='ignore')
+
+#Indice area foliar
+mask = ((0.69 - SAVI) / 0.59) > 0
+IAF = numpy.choose(mask, (0.0, (numpy.log((0.69 - SAVI)/0.59))/0.91 * (-1)))
+EscreveResult(IAF,'IAF.tif')
+SAVI = None
+
+numpy.seterr(all='warn')
+
+#Emissividade
+Enb = 0.97 + 0.00331* IAF
+E0 = 0.95 + 0.01 * IAF
+IAF = None
+
+#Temperatura satelite (K)
+T = 1260.56/(numpy.log((Enb*607.76/L6) +1))
+L6 = None
+EscreveResult(T,'Temperatura.tif')
+Enb = None
+
+#fluxo radiacao termal emitida
+Frt_emit= E0*0.0000000567*T*T*T*T
+
+#Radiacao onda curta incidente
+Rs = 1367 * math.cos(angle)*(0.75 +0.00002*z)*d
+
+#Saldo da radiacao
+Rn = (1 - AlSuper)*Rs + Rol_atm - Frt_emit - (1 - E0)*Rol_atm
+Frt_emit = None
+EscreveResult(Rn,'SaldoRadiacao.tif')
+
+#Fluxo de calor no solo
+G = ((T - 273.15)*(0.0038 + (0.0074*AlSuper))*(1-0.98*numpy.power(NDVI,4)))*Rn
+EscreveResult(G,'FluxoDeCalorNoSolo.tif')
+NDVI = None
+
 x1 = 0.1
 x2 = 0.9
-x2x1 = x2 - x1
 
-#----------
-
-saidaAlbedoSuper = driver.Create('albedoSuperficie.tif',colunas,linhas,1,GDT_Float64)
-if saidaAlbedoSuper is None:
-    print 'Erro ao criar o arquivo: ' + 'albedoSuperficie.tif'
-    sys.exit(1)
-
-saidaNDVI = driver.Create('ndvi.tif',colunas,linhas,1,GDT_Float64)
-if saidaNDVI is None:
-    print 'Erro ao criar o arquivo: ' + 'ndvi.tif'
-    sys.exit(1)
-
-saidaSAVI = driver.Create('savi.tif',colunas,linhas,1,GDT_Float64)
-if saidaSAVI is None:
-    print 'Erro ao criar o arquivo: ' + 'savi.tif'
-    sys.exit(1)
-
-saidaIAF = driver.Create('iaf.tif',colunas,linhas,1,GDT_Float64)
-if saidaIAF is None:
-    print 'Erro ao criar o arquivo: ' + 'iaf.tif'
-    sys.exit(1)
-
-saidaTempSuper = driver.Create('temperatura_superficie.tif',colunas,linhas,1,GDT_Float64)
-if saidaTempSuper is None:
-    print 'Erro ao criar o arquivo: ' + 'temperatura_superficie.tif'
-    sys.exit(1)
-
-saidaSaldoRad = driver.Create('saldoRadiacao.tif',colunas,linhas,1,GDT_Float64)
-if saidaSaldoRad is None:
-    print 'Erro ao criar o arquivo: ' + 'saldoRadiacao.tif'
-    sys.exit(1)
-
-saidaFluxoCalSolo = driver.Create('fluxoCalorSolo.tif',colunas,linhas,1,GDT_Float64)
-if saidaFluxoCalSolo is None:
-    print 'Erro ao criar o arquivo: ' + 'fluxoCalorSolo.tif'
-    sys.exit(1)
-
-#----------
-
-bandaEntrada = numpy.empty([NBandas+1],dtype=osgeo.gdal.Band)
-bandaEntrada[0] = 0
-p1 = numpy.empty([NBandas+1],dtype=numpy.float64)
-p1[0] = 0
-p1[6] = 0
-
-limSupEsq = numpy.zeros([qtdPontos],dtype=numpy.float64)
-limInfEsq = numpy.zeros([qtdPontos],dtype=numpy.float64)
-
-limSupDir = numpy.zeros([qtdPontos],dtype=numpy.float64)
-limInfDir = numpy.zeros([qtdPontos],dtype=numpy.float64)
-
-# ----------
-
-for k in range(1,NBandas+1):
-    bandaEntrada[k] = entrada.GetRasterBand(k)
-
-    if (k != 6):
-        p1[k] = pi / (descBandas[k][5] * cosZ * dr) # pi / (ki * cosZ * dr)
-
-bandaAlbedoSuper = saidaAlbedoSuper.GetRasterBand(1)
-bandaNDVI = saidaNDVI.GetRasterBand(1)
-bandaSAVI = saidaSAVI.GetRasterBand(1)
-bandaIAF = saidaIAF.GetRasterBand(1)
-bandaTempSuper = saidaTempSuper.GetRasterBand(1)
-bandaSaldoRad = saidaSaldoRad.GetRasterBand(1)
-bandaFluxoCalSolo = saidaFluxoCalSolo.GetRasterBand(1)
-
-#----------
-
-xBlockSize = 256
-yBlockSize = 256
-
-for i in range(0,linhas,yBlockSize):
-    if i + yBlockSize < linhas:
-        lerLinhas = yBlockSize
-    else:
-        lerLinhas = linhas - i
-
-    for j in range(0,colunas,xBlockSize):
-        if j + xBlockSize < colunas:
-            lerColunas = xBlockSize
-        else:
-            lerColunas = colunas - j
-
-        #----------
-
-        dados = numpy.empty([NBandas+1,lerLinhas,lerColunas],dtype=numpy.float64)
-        dados[0] = 0
-
-        for k in range(1,NBandas+1):
-            dados[k] = bandaEntrada[k].ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float64)
-
-        #----------
-
-        albedoPlanetrio = 0
-
-        for k in range(1,NBandas+1):
-            if (k == 6):
-                radianciaB6 = descBandas[k][3] + (descBandas[k][6] * dados[k])
-            else:
-                radiancia = descBandas[k][3] + (descBandas[k][6] * dados[k]) # ai+(bi-ai/255)*ND-radiância espectral
-                reflectancia = p1[k] * radiancia
-
-                if (k == 3):
-                    reflectanciaB3 = reflectancia
-                if (k == 4):
-                    reflectanciaB4 = reflectancia
-
-                albedoPlanetrio = albedoPlanetrio + (descBandas[k][7] * reflectancia)
-
-        dados = None
-        radiancia = None
-        reflectancia = None
-
-        ndvi = (reflectanciaB4 - reflectanciaB3) / (reflectanciaB4 + reflectanciaB3)
-        bandaNDVI.WriteArray(ndvi,j,i)
-
-        albedoSuperficie = (albedoPlanetrio - ap) * p2
-        bandaAlbedoSuper.WriteArray(albedoSuperficie,j,i)
-
-        albedoPlanetrio = None
-
-        savi = ((1 + L) * (reflectanciaB4 - reflectanciaB3)) / (L + (reflectanciaB4 + reflectanciaB3))
-        bandaSAVI.WriteArray(savi,j,i)
-
-        reflectanciaB4 = None
-        reflectanciaB3 = None
-
-        numpy.seterr(all='ignore')
-
-        maskLog = ((0.69 - savi) / 0.59) > 0
-
-        iaf = numpy.choose(maskLog, (0.0, -1 * (numpy.log((0.69 - savi) / 0.59) / 0.91)))
-        bandaIAF.WriteArray(iaf,j,i)
-
-        numpy.seterr(all='warn')
-
-        savi = None
-
-        ENB = 0.97 + 0.00331 * iaf
-        E0 = 0.95 + 0.01 * iaf
-
-        iaf = None
-
-        temperaturaSuperficie = K2 / numpy.log(((ENB * K1) / radianciaB6) + 1)
-        bandaTempSuper.WriteArray(temperaturaSuperficie,j,i)
-
-        radianciaB6 = None
-        ENB = None
-
-        radOndaLongaEmi = (E0 * constSB) * (temperaturaSuperficie*temperaturaSuperficie*\
-                                            temperaturaSuperficie*temperaturaSuperficie)
-
-        saldoRadiacao = radOndaCurtaInci * (1 - albedoSuperficie) - radOndaLongaEmi +\
-                        radOndaLongaInci - (1 - E0) * radOndaLongaInci
-        bandaSaldoRad.WriteArray(saldoRadiacao,j,i)
-
-        E0 = None
-        radOndaLongaEmi = None
-
-        fluxoCalSolo = ((temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * albedoSuperficie))\
-                       * (1 - (0.98 * (ndvi*ndvi*ndvi*ndvi)))) * saldoRadiacao
-        bandaFluxoCalSolo.WriteArray(fluxoCalSolo,j,i)
-
-        ndvi = None
-        saldoRadiacao = None
-        fluxoCalSolo = None
-
-        #----------
-
-        maskAlbedoSuper = albedoSuperficie <= 0.2
-        limiteLadoEsq = temperaturaSuperficie[maskAlbedoSuper]
-
-        maskAlbedoSuper = albedoSuperficie >= 0.75
-        limiteLadoDir = temperaturaSuperficie[maskAlbedoSuper]
-
-        maskAlbedoSuper = None
-        albedoSuperficie = None
-        temperaturaSuperficie = None
-
-        limiteLadoEsq = numpy.sort(limiteLadoEsq)
-        limiteLadoDir = numpy.sort(limiteLadoDir)
-
-        limSupEsqAux = limiteLadoEsq[::-1][0:qtdPontos]
-        limInfEsqAux = limiteLadoEsq[0:qtdPontos]
-
-        limSupDirAux = limiteLadoDir[::-1][0:qtdPontos]
-        limInfDirAux = limiteLadoDir[0:qtdPontos]
-
-        limiteLadoEsq = None
-        limiteLadoDir = None
-
-        for l in range(limSupEsqAux.size):
-            for o in range(qtdPontos):
-                if (limSupEsqAux[l] >= limSupEsq[o]) or (limSupEsq[o] == 0.0):
-                    limSupEsq = numpy.insert(limSupEsq,o,limSupEsqAux[l])
-                    limSupEsq = numpy.delete(limSupEsq,qtdPontos)
-                    break
-
-            for o in range(qtdPontos):
-                if (limInfEsqAux[l] <= limInfEsq[o]) or (limInfEsq[o] == 0.0):
-                    limInfEsq = numpy.insert(limInfEsq,o,limInfEsqAux[l])
-                    limInfEsq = numpy.delete(limInfEsq,qtdPontos)
-                    break
-
-        for l in range(limSupDirAux.size):
-            for o in range(qtdPontos):
-                if (limSupDirAux[l] >= limSupDir[o]) or (limSupDir[o] == 0.0):
-                    limSupDir = numpy.insert(limSupDir,o,limSupDirAux[l])
-                    limSupDir = numpy.delete(limSupDir,qtdPontos)
-                    break
-
-            for o in range(qtdPontos):
-                if (limInfDirAux[l] <= limInfDir[o]) or (limInfDir[o] == 0.0):
-                    limInfDir = numpy.insert(limInfDir,o,limInfDirAux[l])
-                    limInfDir = numpy.delete(limInfDir,qtdPontos)
-                    break
-
-        limSupEsqAux = None
-        limInfEsqAux = None
-        limSupDirAux = None
-        limInfDirAux = None
-
-        #----------
-
-#----------
-
-bandaEntrada = None
-entrada = None
-bandaNDVI = None
-saidaNDVI = None
-bandaSAVI = None
-saidaSAVI = None
-bandaIAF = None
-saidaIAF = None
-
-#----------
-
-limSupEsq = numpy.sum(limSupEsq) / qtdPontos
-limInfEsq = numpy.sum(limInfEsq) / qtdPontos
-
-limSupDir = numpy.sum(limSupDir) / qtdPontos
-limInfDir = numpy.sum(limInfDir) / qtdPontos
-
-m1 = (limSupDir - limSupEsq) / x2x1
-m2 = (limInfDir - limInfEsq) / x2x1
-
-c1 = ((x2 * limSupEsq) - (x1 * limSupDir)) / x2x1
-c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1
-
-#----------
-
-saidaFracEvapo = driver.Create('fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float64)
-if saidaFracEvapo is None:
-    print 'Erro ao criar o arquivo: ' + 'fracaoEvaporativa.tif'
-    sys.exit(1)
-
-saidaFluxCalSensi = driver.Create('fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float64)
-if saidaFluxCalSensi is None:
-    print 'Erro ao criar o arquivo: ' + 'fluxoCalorSensivel.tif'
-    sys.exit(1)
-
-saidaFluxCalLaten = driver.Create('fluxoCalorLatente.tif',colunas,linhas,1,GDT_Float64)
-if saidaFluxCalLaten is None:
-    print 'Erro ao criar o arquivo: ' + 'fluxoCalorLatente.tif'
-    sys.exit(1)
-
-#----------
-
-bandaFracEvapo = saidaFracEvapo.GetRasterBand(1)
-bandaFluxCalSensi = saidaFluxCalSensi.GetRasterBand(1)
-bandaFluxCalLaten = saidaFluxCalLaten.GetRasterBand(1)
-
-#----------
-
-for i in range(0,linhas,yBlockSize):
-    if i + yBlockSize < linhas:
-        lerLinhas = yBlockSize
-    else:
-        lerLinhas = linhas - i
-
-    for j in range(0,colunas,xBlockSize):
-        if j + xBlockSize < colunas:
-            lerColunas = xBlockSize
-        else:
-            lerColunas = colunas - j
-
-        #----------
-
-        albedoSuperficie = bandaAlbedoSuper.ReadAsArray(j,i,lerColunas,lerLinhas)
-        temperaturaSuperficie = bandaTempSuper.ReadAsArray(j,i,lerColunas,lerLinhas)
-        saldoRadiacao = bandaSaldoRad.ReadAsArray(j,i,lerColunas,lerLinhas)
-        fluxoCalSolo = bandaFluxoCalSolo.ReadAsArray(j,i,lerColunas,lerLinhas)
-
-        #----------
-
-        fracaoEvaporativa = (c1 + (m1 * albedoSuperficie) - temperaturaSuperficie) / ((c1 - c2) + ((m1 - m2) * albedoSuperficie))
-        bandaFracEvapo.WriteArray(fracaoEvaporativa,j,i)
-
-        albedoSuperficie = None
-        temperaturaSuperficie = None
-
-        fluxoCalorSensivel = (1 - fracaoEvaporativa) * (saldoRadiacao - fluxoCalSolo)
-        bandaFluxCalSensi.WriteArray(fluxoCalorSensivel,j,i)
-
-        fluxoCalorSensivel = None
-
-        fluxoCalorLatente = fracaoEvaporativa * (saldoRadiacao - fluxoCalSolo)
-        bandaFluxCalLaten.WriteArray(fluxoCalorLatente,j,i)
-
-        fluxoCalorLatente = None
-
-        #----------
-
-        saldoRadiacao = None
-        fluxoCalSolo = None
-        fracaoEvaporativa = None
-
-        #----------
-
-bandaAlbedoSuper = None
-saidaAlbedoSuper = None
-bandaTempSuper = None
-saidaTempSuper = None
-bandaSaldoRad = None
-saidaSaldoRad = None
-bandaFluxoCalSolo = None
-saidaFluxoCalSolo = None
-bandaFracEvapo = None
-saidaFracEvapo = None
-bandaFluxCalSensi = None
-saidaFluxCalSensi = None
-bandaFluxCalLaten = None
-saidaFluxCalLaten = None
-
-#----------
+#Pontos p/ lim superior e inferior
+maskAlbedoSuper = AlSuper <= 0.2
+limiteLadoEsq = T[maskAlbedoSuper]
+
+maskAlbedoSuper = AlSuper >= 0.75
+limiteLadoDir = T[maskAlbedoSuper]
+
+limiteLadoEsq = numpy.sort(limiteLadoEsq)
+limiteLadoDir = numpy.sort(limiteLadoDir)
+
+limSupEsqAux = limiteLadoEsq[::-1][0:20]
+limInfEsqAux = limiteLadoEsq[0:20]
+
+limSupDirAux = limiteLadoDir[::-1][0:20]
+limInfDirAux = limiteLadoDir[0:20]
+
+y1 = numpy.sum(limSupEsqAux)/20
+y3 = numpy.sum(limInfEsqAux)/20
+y2 = numpy.sum(limSupDirAux)/20
+y4 = numpy.sum(limInfDirAux)/20
+
+#Coeficientes das retas
+m1 = (y2-y1)/(x2-x1)
+m2 = (y4-y3)/(x2-x1)
+c1 = (x2*y1 - x1*y2)/(x2-x1)
+c2 = (x2*y3 - x1*y4)/(x2-x1)
+
+#fracao evaporativa
+V_virado = ((c1 + m1*AlSuper) - T)/(c1 - c2 + (m1 - m2)*AlSuper)
+T = None
+AlSuper = None
+EscreveResult(V_virado,'FracaoEvaporativa.tif')
+
+#Fluxo calor sensivel
+H = (1- V_virado)*(Rn - G)
+EscreveResult(H,'FluxoCalorSensivel.tif')
+H = None
+
+#Fluxo calor latente
+LE = V_virado * (Rn - G)
+EscreveResult(LE,'FluxoCalorLatente.tif')
+
+G = None
+Rn = None
+V_virado = None
 
 fim = time.time()
-
-print 'Tempo total: '+str(fim - inicio)+' segundos.'
+print 'Tempo total: '+str(fim - inicio)
