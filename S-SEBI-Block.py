@@ -25,7 +25,7 @@ print 'linhas:',linhas,' colunas:',colunas,'bandas:',NBandas,'driver:',driverEnt
 #----------
 
 pi = math.pi
-cosZ = math.cos((pi/2)-56.98100422) # pego do metadata da imagem - SUN_ELEVATION
+cosZ = math.cos((90 - 56.98100422)*pi/180) # pego do metadata da imagem - SUN_ELEVATION
 dr = 1+0.033*math.cos((272*2*pi)/365) # 29 de setembro de 2011
 ap = 0.03
 z = 200
