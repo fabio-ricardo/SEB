@@ -167,7 +167,7 @@ Enb = None
 Frt_emit= E0*0.0000000567*T*T*T*T
 
 #Radiacao onda curta incidente
-Rs = 1367 * math.cos(angle)*(0.75 +0.00002*z)*d
+Rs = 1367 * math.cos(angle)*(0.75 +0.00002*z) * d
 
 #Saldo da radiacao
 Rn = (1 - AlSuper)*Rs + Rol_atm - Frt_emit - (1 - E0)*Rol_atm

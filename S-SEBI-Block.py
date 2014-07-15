@@ -39,7 +39,7 @@ S = 1367
 radOndaCurtaInci = S * cosZ * dr * tsw
 Ea = 0.85 * math.pow(-1 * math.log(tsw),0.09)
 Ta = 295
-radOndaLongaInci = Ea * constSB * (Ta*Ta*Ta*Ta)
+radOndaLongaInci = Ea * constSB * math.pow(Ta,4)
 qtdPontos = 20
 x1 = 0.1
 x2 = 0.9
@@ -102,7 +102,7 @@ for k in range(1,NBandas+1):
     bandaEntrada[k] = entrada.GetRasterBand(k)
 
     if (k != 6):
-        p1[k] = pi / (descBandas[k][5] * cosZ * dr) # pi / (ki * cosZ * dr)
+        p1[k] = pi / (descBandas[k][5] * cosZ * dr)
 
 bandaAlbedoSuper = saidaAlbedoSuper.GetRasterBand(1)
 bandaNDVI = saidaNDVI.GetRasterBand(1)
@@ -145,7 +145,7 @@ for i in range(0,linhas,yBlockSize):
             if (k == 6):
                 radianciaB6 = descBandas[k][3] + (descBandas[k][6] * dados[k])
             else:
-                radiancia = descBandas[k][3] + (descBandas[k][6] * dados[k]) # ai+(bi-ai/255)*ND-radiância espectral
+                radiancia = descBandas[k][3] + (descBandas[k][6] * dados[k])
                 reflectancia = p1[k] * radiancia
 
                 if (k == 3):
