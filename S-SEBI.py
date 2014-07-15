@@ -40,7 +40,7 @@ k5 = 215.0
 k7 = 80.67
 
 #Angulo zenital
-angle = (math.pi/2)-56.98100422
+angle = (90 -56.98100422)*math.pi/180
 
 #Razao Dist. entre Terra-Sol (272 dia sequencial)
 d = 1+0.033*math.cos((2*math.pi*272)/365)
