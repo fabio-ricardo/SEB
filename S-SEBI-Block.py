@@ -25,7 +25,7 @@ print 'linhas:',linhas,' colunas:',colunas,'bandas:',NBandas,'driver:',driverEnt
 #----------
 
 pi = math.pi
-cosZ = math.cos((pi/2)-56.98100422) # pego do cabeçalho da imagem - SUN_ELEVATION
+cosZ = math.cos((pi/2)-56.98100422) # pego do metadata da imagem - SUN_ELEVATION
 dr = 1+0.033*math.cos((272*2*pi)/365) # 29 de setembro de 2011
 ap = 0.03
 z = 200
@@ -37,9 +37,10 @@ K2 = 1260.56
 constSB = 0.0000000567
 S = 1367
 radOndaCurtaInci = S * cosZ * dr * tsw
-Ea = 0.85 * numpy.power(-1 * numpy.log(tsw),0.09)
+Ea = 0.85 * math.pow(-1 * math.log(tsw),0.09)
 Ta = 295
 radOndaLongaInci = Ea * constSB * (Ta*Ta*Ta*Ta)
+qtdPontos = 20
 x1 = 0.1
 x2 = 0.9
 x2x1 = x2 - x1
@@ -87,12 +88,13 @@ bandaEntrada = numpy.empty([NBandas+1],dtype=osgeo.gdal.Band)
 bandaEntrada[0] = 0
 p1 = numpy.empty([NBandas+1],dtype=numpy.float64)
 p1[0] = 0
+p1[6] = 0
 
-limSupEsq = numpy.zeros([20],dtype=numpy.float64)
-limInfEsq = numpy.zeros([20],dtype=numpy.float64)
+limSupEsq = numpy.zeros([qtdPontos],dtype=numpy.float64)
+limInfEsq = numpy.zeros([qtdPontos],dtype=numpy.float64)
 
-limSupDir = numpy.zeros([20],dtype=numpy.float64)
-limInfDir = numpy.zeros([20],dtype=numpy.float64)
+limSupDir = numpy.zeros([qtdPontos],dtype=numpy.float64)
+limInfDir = numpy.zeros([qtdPontos],dtype=numpy.float64)
 
 # ----------
 
@@ -114,8 +116,6 @@ bandaFluxoCalSolo = saidaFluxoCalSolo.GetRasterBand(1)
 
 xBlockSize = 256
 yBlockSize = 256
-
-numpy.seterr(all='ignore')
 
 for i in range(0,linhas,yBlockSize):
     if i + yBlockSize < linhas:
@@ -173,13 +173,19 @@ for i in range(0,linhas,yBlockSize):
         reflectanciaB4 = None
         reflectanciaB3 = None
 
-        iaf = -1 * (numpy.log((0.69 - savi) / 0.59) / 0.91)
+        numpy.seterr(all='ignore')
+
+        maskLog = ((0.69 - savi) / 0.59) > 0
+
+        iaf = numpy.choose(maskLog, (0.0, -1 * (numpy.log((0.69 - savi) / 0.59) / 0.91)))
         bandaIAF.WriteArray(iaf,j,i)
+
+        numpy.seterr(all='warn')
 
         savi = None
 
         ENB = 0.97 + 0.00331 * iaf
-        E0 = 0.95 + 0.01* iaf
+        E0 = 0.95 + 0.01 * iaf
 
         iaf = None
 
@@ -199,8 +205,7 @@ for i in range(0,linhas,yBlockSize):
         E0 = None
         radOndaLongaEmi = None
 
-        fluxoCalSolo = ((temperaturaSuperficie - 273.15) *\
-                       (0.0038 + (0.0074 * albedoSuperficie))\
+        fluxoCalSolo = ((temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * albedoSuperficie))\
                        * (1 - (0.98 * (ndvi*ndvi*ndvi*ndvi)))) * saldoRadiacao
         bandaFluxoCalSolo.WriteArray(fluxoCalSolo,j,i)
 
@@ -208,7 +213,7 @@ for i in range(0,linhas,yBlockSize):
         saldoRadiacao = None
         fluxoCalSolo = None
 
-        #---------- REVISAR DAKI PRA BAIXO
+        #----------
 
         maskAlbedoSuper = albedoSuperficie <= 0.2
         limiteLadoEsq = temperaturaSuperficie[maskAlbedoSuper]
@@ -220,44 +225,50 @@ for i in range(0,linhas,yBlockSize):
         albedoSuperficie = None
         temperaturaSuperficie = None
 
-        limiteLadoEsq = numpy.sort(limiteLadoEsq) ###--- OS VALORES ESTAO DIFERENTES DO FABIO.
-        limiteLadoDir = numpy.sort(limiteLadoDir) ###--- OS VALORES ESTAO DIFERENTES DO FABIO.
+        limiteLadoEsq = numpy.sort(limiteLadoEsq) ###--- Criar algoritmo para não precisar ordenar.
+        limiteLadoDir = numpy.sort(limiteLadoDir) ###--- Criar algoritmo para não precisar ordenar.
 
-        limSupEsqAux = limiteLadoEsq[::-1][0:20]
-        limInfEsqAux = limiteLadoEsq[0:20]
+        limSupEsqAux = limiteLadoEsq[::-1][0:qtdPontos]
+        limInfEsqAux = limiteLadoEsq[0:qtdPontos]
 
-        limSupDirAux = limiteLadoDir[::-1][0:20]
-        limInfDirAux = limiteLadoDir[0:20]
+        limSupDirAux = limiteLadoDir[::-1][0:qtdPontos]
+        limInfDirAux = limiteLadoDir[0:qtdPontos]
 
         limiteLadoEsq = None
         limiteLadoDir = None
 
         for l in range(limSupEsqAux.size):
-            if (limSupEsqAux[l] >= limSupEsq[l]) or (limSupEsq[l] == 0):
-                limSupEsq = numpy.insert(limSupEsq,l,limSupEsqAux[l])
-                limSupEsq = numpy.delete(limSupEsq,limSupEsq.size - 1)
+            for o in range(qtdPontos):
+                if (limSupEsqAux[l] >= limSupEsq[o]) or (limSupEsq[o] == 0.0):
+                    limSupEsq = numpy.insert(limSupEsq,o,limSupEsqAux[l])
+                    limSupEsq = numpy.delete(limSupEsq,qtdPontos)
+                    break
 
-            if (limInfEsqAux[l] <= limInfEsq[l]) or (limInfEsq[l] == 0):
-                limInfEsq = numpy.insert(limInfEsq,l,limInfEsqAux[l])
-                limInfEsq = numpy.delete(limInfEsq,limInfEsq.size - 1)
+            for o in range(qtdPontos):
+                if (limInfEsqAux[l] <= limInfEsq[o]) or (limInfEsq[o] == 0.0):
+                    limInfEsq = numpy.insert(limInfEsq,o,limInfEsqAux[l])
+                    limInfEsq = numpy.delete(limInfEsq,qtdPontos)
+                    break
 
         for l in range(limSupDirAux.size):
-            if (limSupDirAux[l] >= limSupDir[l]) or (limSupDir[l] == 0):
-                limSupDir = numpy.insert(limSupDir,l,limSupDirAux[l])
-                limSupDir = numpy.delete(limSupDir,limSupDir.size - 1)
+            for o in range(qtdPontos):
+                if (limSupDirAux[l] >= limSupDir[o]) or (limSupDir[o] == 0.0):
+                    limSupDir = numpy.insert(limSupDir,o,limSupDirAux[l])
+                    limSupDir = numpy.delete(limSupDir,qtdPontos)
+                    break
 
-            if (limInfDirAux[l] <= limInfDir[l]) or (limInfDir[l] == 0):
-                limInfDir = numpy.insert(limInfDir,l,limInfDirAux[l])
-                limInfDir = numpy.delete(limInfDir,limInfDir.size - 1)
+            for o in range(qtdPontos):
+                if (limInfDirAux[l] <= limInfDir[o]) or (limInfDir[o] == 0.0):
+                    limInfDir = numpy.insert(limInfDir,o,limInfDirAux[l])
+                    limInfDir = numpy.delete(limInfDir,qtdPontos)
+                    break
 
         limSupEsqAux = None
         limInfEsqAux = None
         limSupDirAux = None
         limInfDirAux = None
 
-        #---------- ^^^^^^^^^^^ATÉ AQUI
-
-numpy.seterr(all='warn')
+        #----------
 
 #----------
 
@@ -270,13 +281,13 @@ saidaSAVI = None
 bandaIAF = None
 saidaIAF = None
 
-#---------- REVISAR DAKI PRA BAIXO
+#----------
 
-limSupEsq = numpy.sum(limSupEsq) / 20
-limInfEsq = numpy.sum(limInfEsq) / 20
+limSupEsq = numpy.sum(limSupEsq) / qtdPontos
+limInfEsq = numpy.sum(limInfEsq) / qtdPontos
 
-limSupDir = numpy.sum(limSupDir) / 20
-limInfDir = numpy.sum(limInfDir) / 20
+limSupDir = numpy.sum(limSupDir) / qtdPontos
+limInfDir = numpy.sum(limInfDir) / qtdPontos
 
 m1 = (limSupDir - limSupEsq) / x2x1
 m2 = (limInfDir - limInfEsq) / x2x1
@@ -284,7 +295,7 @@ m2 = (limInfDir - limInfEsq) / x2x1
 c1 = ((x2 * limSupEsq) - (x1 * limSupDir)) / x2x1
 c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1
 
-#---------- ATÉ AQUI
+#----------
 
 saidaFracEvapo = driver.Create('fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float64)
 if saidaFracEvapo is None:
@@ -328,7 +339,7 @@ for i in range(0,linhas,yBlockSize):
         saldoRadiacao = bandaSaldoRad.ReadAsArray(j,i,lerColunas,lerLinhas)
         fluxoCalSolo = bandaFluxoCalSolo.ReadAsArray(j,i,lerColunas,lerLinhas)
 
-        #---------- REVISAR DAKI PRA BAIXO
+        #----------
 
         fracaoEvaporativa = (c1 + (m1 * albedoSuperficie) - temperaturaSuperficie) / ((c1 - c2) + ((m1 - m2) * albedoSuperficie))
         bandaFracEvapo.WriteArray(fracaoEvaporativa,j,i)
@@ -346,7 +357,7 @@ for i in range(0,linhas,yBlockSize):
 
         fluxoCalorLatente = None
 
-        #---------- ATÉ AQUI
+        #----------
 
         saldoRadiacao = None
         fluxoCalSolo = None
