@@ -1,0 +1,18 @@
+Imagem 411MB - 8001x7001
+
+S-SEBI - Fabio - 3GB Uso memoria Constante
+219 segundos
+214 segundos
+
+-----
+
+S-SEBI-Block - Vinicius - 80MB uso de memoria Constante
+261 segundos
+252
+
+-----
+
+S-SEBI-Hybrid 0 - Vinicius - #Usa 80MB de memoria até calcular os limites, depois
+			     #Usa de 1GB Até 2.5GB (Pico mais alto), por pouco tempo.
+199 segundos - 2.3GB pico Memoria
+208 segundos - 2.5GB pico Memoria
