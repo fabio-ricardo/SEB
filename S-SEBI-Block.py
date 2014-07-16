@@ -92,13 +92,11 @@ p1[6] = 0
 
 limSupEsq = numpy.zeros([qtdPontos],dtype=numpy.float64)
 limInfEsq = numpy.zeros([qtdPontos],dtype=numpy.float64)
-limSupEsqPVez = True
-limInfEsqPVez = True
+limEsqPVez = True
 
 limSupDir = numpy.zeros([qtdPontos],dtype=numpy.float64)
 limInfDir = numpy.zeros([qtdPontos],dtype=numpy.float64)
-limSupDirPVez = True
-limInfDirPVez = True
+limDirPVez = True
 
 # ----------
 
@@ -242,29 +240,21 @@ for i in range(0,linhas,yBlockSize):
         limiteLadoDir = None
 
         if (limSupEsqAux.size > 0):
-            if (limSupEsqPVez):
+            if (limEsqPVez):
                 limSupEsq = numpy.sort(limSupEsqAux)[::-1][0:qtdPontos]
-                limSupEsqPVez = False
+                limInfEsq = numpy.sort(limInfEsqAux)[0:qtdPontos]
+                limEsqPVez = False
             else:
                 limSupEsq = numpy.sort(numpy.concatenate((limSupEsq,limSupEsqAux)))[::-1][0:qtdPontos]
-
-            if (limInfEsqPVez):
-                limInfEsq = numpy.sort(limInfEsqAux)[0:qtdPontos]
-                limInfEsqPVez = False
-            else:
                 limInfEsq = numpy.sort(numpy.concatenate((limInfEsq,limInfEsqAux)))[0:qtdPontos]
 
         if (limSupDirAux.size > 0):
-            if (limSupDirPVez):
+            if (limDirPVez):
                 limSupDir = numpy.sort(limSupDirAux)[::-1][0:qtdPontos]
-                limSupDirPVez = False
+                limInfDir = numpy.sort(limInfDirAux)[0:qtdPontos]
+                limDirPVez = False
             else:
                 limSupDir = numpy.sort(numpy.concatenate((limSupDir,limSupDirAux)))[::-1][0:qtdPontos]
-
-            if (limInfDirPVez):
-                limInfDir = numpy.sort(limInfDirAux)[0:qtdPontos]
-                limInfDirPVez = False
-            else:
                 limInfDir = numpy.sort(numpy.concatenate((limInfDir,limInfDirAux)))[0:qtdPontos]
 
         limSupEsqAux = None
