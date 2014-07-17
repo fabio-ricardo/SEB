@@ -245,40 +245,28 @@ for i in range(0,linhas,yBlockSize):
         albedoSuperficie = None
         temperaturaSuperficie = None
 
-        limiteLadoEsq = numpy.sort(limiteLadoEsq)
-        limiteLadoDir = numpy.sort(limiteLadoDir)
+        if (limiteLadoEsq.size > 0):
+            if (limEsqPVez):
+                limiteLadoEsq = numpy.sort(limiteLadoEsq)
+                limSupEsq = limiteLadoEsq[::-1][0:qtdPontos]
+                limInfEsq = limiteLadoEsq[0:qtdPontos]
+                limEsqPVez = False
+            else:
+                limSupEsq = numpy.sort(numpy.concatenate((limSupEsq,limiteLadoEsq)))[::-1][0:qtdPontos]
+                limInfEsq = numpy.sort(numpy.concatenate((limInfEsq,limiteLadoEsq)))[0:qtdPontos]
 
-        limSupEsqAux = limiteLadoEsq[::-1][0:qtdPontos]
-        limInfEsqAux = limiteLadoEsq[0:qtdPontos]
-
-        limSupDirAux = limiteLadoDir[::-1][0:qtdPontos]
-        limInfDirAux = limiteLadoDir[0:qtdPontos]
+        if (limiteLadoDir.size > 0):
+            if (limDirPVez):
+                limiteLadoDir = numpy.sort(limiteLadoDir)
+                limSupDir = limiteLadoDir[::-1][0:qtdPontos]
+                limInfDir = limiteLadoDir[0:qtdPontos]
+                limDirPVez = False
+            else:
+                limSupDir = numpy.sort(numpy.concatenate((limSupDir,limiteLadoDir)))[::-1][0:qtdPontos]
+                limInfDir = numpy.sort(numpy.concatenate((limInfDir,limiteLadoDir)))[0:qtdPontos]
 
         limiteLadoEsq = None
         limiteLadoDir = None
-
-        if (limSupEsqAux.size > 0):
-            if (limEsqPVez):
-                limSupEsq = numpy.sort(limSupEsqAux)[::-1][0:qtdPontos]
-                limInfEsq = numpy.sort(limInfEsqAux)[0:qtdPontos]
-                limEsqPVez = False
-            else:
-                limSupEsq = numpy.sort(numpy.concatenate((limSupEsq,limSupEsqAux)))[::-1][0:qtdPontos]
-                limInfEsq = numpy.sort(numpy.concatenate((limInfEsq,limInfEsqAux)))[0:qtdPontos]
-
-        if (limSupDirAux.size > 0):
-            if (limDirPVez):
-                limSupDir = numpy.sort(limSupDirAux)[::-1][0:qtdPontos]
-                limInfDir = numpy.sort(limInfDirAux)[0:qtdPontos]
-                limDirPVez = False
-            else:
-                limSupDir = numpy.sort(numpy.concatenate((limSupDir,limSupDirAux)))[::-1][0:qtdPontos]
-                limInfDir = numpy.sort(numpy.concatenate((limInfDir,limInfDirAux)))[0:qtdPontos]
-
-        limSupEsqAux = None
-        limInfEsqAux = None
-        limSupDirAux = None
-        limInfDirAux = None
 
         #----------
 
