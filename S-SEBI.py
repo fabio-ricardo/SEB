@@ -19,6 +19,7 @@ linhas = entrada.RasterYSize
 colunas = entrada.RasterXSize
 NBandas = entrada.RasterCount
 driverEntrada = entrada.GetDriver()
+projecao = entrada.GetProjection()
 
 print 'linhas:',linhas,' colunas:',colunas,'bandas:',NBandas,'driver:',driverEntrada.ShortName
 
@@ -57,7 +58,7 @@ for k in range(1,NBandas+1):
 
 #----------
 
-pastaSaida = 'S-SEBI__'+nomeArquivoEntrada
+pastaSaida = 'S-SEBI__'+nomeArquivoEntrada+'/'
 
 try:
     os.mkdir(pastaSaida)
@@ -113,11 +114,12 @@ radiancia = None
 
 #----------
 
-saidaNDVI = driver.Create(pastaSaida+'/ndvi.tif',colunas,linhas,1,GDT_Float64)
+saidaNDVI = driver.Create(pastaSaida+'ndvi.tif',colunas,linhas,1,GDT_Float64)
 if saidaNDVI is None:
     print 'Erro ao criar o arquivo: ' + 'ndvi.tif'
     sys.exit(1)
 
+saidaNDVI.SetProjection(projecao)
 bandaNDVI = saidaNDVI.GetRasterBand(1)
 
 ndvi = (reflectanciaB4 - reflectanciaB3) / (reflectanciaB4 + reflectanciaB3)
@@ -128,11 +130,12 @@ saidaNDVI = None
 
 #----------
 
-saidaSAVI = driver.Create(pastaSaida+'/savi.tif',colunas,linhas,1,GDT_Float64)
+saidaSAVI = driver.Create(pastaSaida+'savi.tif',colunas,linhas,1,GDT_Float64)
 if saidaSAVI is None:
     print 'Erro ao criar o arquivo: ' + 'savi.tif'
     sys.exit(1)
 
+saidaSAVI.SetProjection(projecao)
 bandaSAVI = saidaSAVI.GetRasterBand(1)
 
 savi = ((1 + L) * (reflectanciaB4 - reflectanciaB3)) / (L + (reflectanciaB4 + reflectanciaB3))
@@ -146,11 +149,12 @@ reflectanciaB3 = None
 
 #----------
 
-saidaIAF = driver.Create(pastaSaida+'/iaf.tif',colunas,linhas,1,GDT_Float64)
+saidaIAF = driver.Create(pastaSaida+'iaf.tif',colunas,linhas,1,GDT_Float64)
 if saidaIAF is None:
     print 'Erro ao criar o arquivo: ' + 'iaf.tif'
     sys.exit(1)
 
+saidaIAF.SetProjection(projecao)
 bandaIAF = saidaIAF.GetRasterBand(1)
 
 numpy.seterr(all='ignore')
@@ -204,11 +208,12 @@ entrada = None
 
 #----------
 
-saidaAlbedoSuper = driver.Create(pastaSaida+'/albedoSuperficie.tif',colunas,linhas,1,GDT_Float64)
+saidaAlbedoSuper = driver.Create(pastaSaida+'albedoSuperficie.tif',colunas,linhas,1,GDT_Float64)
 if saidaAlbedoSuper is None:
     print 'Erro ao criar o arquivo: ' + 'albedoSuperficie.tif'
     sys.exit(1)
 
+saidaAlbedoSuper.SetProjection(projecao)
 bandaAlbedoSuper = saidaAlbedoSuper.GetRasterBand(1)
 
 albedoSuperficie = (albedoPlanetario - ap) * p2
@@ -228,11 +233,12 @@ iaf = None
 
 #----------
 
-saidaTempSuper = driver.Create(pastaSaida+'/temperatura_superficie.tif',colunas,linhas,1,GDT_Float64)
+saidaTempSuper = driver.Create(pastaSaida+'temperatura_superficie.tif',colunas,linhas,1,GDT_Float64)
 if saidaTempSuper is None:
     print 'Erro ao criar o arquivo: ' + 'temperatura_superficie.tif'
     sys.exit(1)
 
+saidaTempSuper.SetProjection(projecao)
 bandaTempSuper = saidaTempSuper.GetRasterBand(1)
 
 temperaturaSuperficie = K2 / numpy.log(((ENB * K1) / radianciaB6) + 1)
@@ -246,11 +252,12 @@ ENB = None
 
 #----------
 
-saidaSaldoRad = driver.Create(pastaSaida+'/saldoRadiacao.tif',colunas,linhas,1,GDT_Float64)
+saidaSaldoRad = driver.Create(pastaSaida+'saldoRadiacao.tif',colunas,linhas,1,GDT_Float64)
 if saidaSaldoRad is None:
     print 'Erro ao criar o arquivo: ' + 'saldoRadiacao.tif'
     sys.exit(1)
 
+saidaSaldoRad.SetProjection(projecao)
 bandaSaldoRad = saidaSaldoRad.GetRasterBand(1)
 
 radOndaLongaEmi = (E0 * constSB) * (temperaturaSuperficie*temperaturaSuperficie*\
@@ -268,11 +275,12 @@ radOndaLongaEmi = None
 
 #----------
 
-saidaFluxoCalSolo = driver.Create(pastaSaida+'/fluxoCalorSolo.tif',colunas,linhas,1,GDT_Float64)
+saidaFluxoCalSolo = driver.Create(pastaSaida+'fluxoCalorSolo.tif',colunas,linhas,1,GDT_Float64)
 if saidaFluxoCalSolo is None:
     print 'Erro ao criar o arquivo: ' + 'fluxoCalorSolo.tif'
     sys.exit(1)
 
+saidaFluxoCalSolo.SetProjection(projecao)
 bandaFluxoCalSolo = saidaFluxoCalSolo.GetRasterBand(1)
 
 fluxoCalSolo = ((temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * albedoSuperficie))\
@@ -322,11 +330,12 @@ c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1
 
 #----------
 
-saidaFracEvapo = driver.Create(pastaSaida+'/fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float64)
+saidaFracEvapo = driver.Create(pastaSaida+'fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float64)
 if saidaFracEvapo is None:
     print 'Erro ao criar o arquivo: ' + 'fracaoEvaporativa.tif'
     sys.exit(1)
 
+saidaFracEvapo.SetProjection(projecao)
 bandaFracEvapo = saidaFracEvapo.GetRasterBand(1)
 
 fracaoEvaporativa = (c1 + (m1 * albedoSuperficie) - temperaturaSuperficie) / ((c1 - c2) + ((m1 - m2) * albedoSuperficie))
@@ -340,11 +349,12 @@ temperaturaSuperficie = None
 
 #----------
 
-saidaFluxCalSensi = driver.Create(pastaSaida+'/fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float64)
+saidaFluxCalSensi = driver.Create(pastaSaida+'fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float64)
 if saidaFluxCalSensi is None:
     print 'Erro ao criar o arquivo: ' + 'fluxoCalorSensivel.tif'
     sys.exit(1)
 
+saidaFluxCalSensi.SetProjection(projecao)
 bandaFluxCalSensi = saidaFluxCalSensi.GetRasterBand(1)
 
 fluxoCalorSensivel = (1 - fracaoEvaporativa) * (saldoRadiacao - fluxoCalSolo)
@@ -357,11 +367,12 @@ fluxoCalorSensivel = None
 
 #----------
 
-saidaFluxCalLaten = driver.Create(pastaSaida+'/fluxoCalorLatente.tif',colunas,linhas,1,GDT_Float64)
+saidaFluxCalLaten = driver.Create(pastaSaida+'fluxoCalorLatente.tif',colunas,linhas,1,GDT_Float64)
 if saidaFluxCalLaten is None:
     print 'Erro ao criar o arquivo: ' + 'fluxoCalorLatente.tif'
     sys.exit(1)
 
+saidaFluxCalLaten.SetProjection(projecao)
 bandaFluxCalLaten = saidaFluxCalLaten.GetRasterBand(1)
 
 fluxoCalorLatente = fracaoEvaporativa * (saldoRadiacao - fluxoCalSolo)

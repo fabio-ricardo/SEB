@@ -12,7 +12,13 @@ S-SEBI-Block - Vinicius - 80MB uso de memoria Constante
 
 -----
 
-S-SEBI-Hybrid 0 - Vinicius - #Usa 80MB de memoria até calcular os limites, depois
+S-SEBI-Hybrid - Vinicius - #Usa 80MB de memoria até calcular os limites, depois
 			     #Usa de 1GB Até 2.5GB (Pico mais alto), por pouco tempo.
 199 segundos - 2.3GB pico Memoria
 208 segundos - 2.5GB pico Memoria
+
+-----
+
+S-SEBI 2.0 - Vinicius - 3GB Uso memoria Constante
+175 segundos
+190 segundos

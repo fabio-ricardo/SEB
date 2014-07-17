@@ -1,5 +1,5 @@
 #coding: utf-8
-import gdal, osgeo, time, numpy, sys, math
+import gdal, osgeo, time, numpy, sys, math, os
 from gdalconst import *
 from constantes import *
 
@@ -19,6 +19,7 @@ linhas = entrada.RasterYSize
 colunas = entrada.RasterXSize
 NBandas = entrada.RasterCount
 driverEntrada = entrada.GetDriver()
+projecao = entrada.GetProjection()
 
 print 'linhas:',linhas,' colunas:',colunas,'bandas:',NBandas,'driver:',driverEntrada.ShortName
 
@@ -47,40 +48,57 @@ x2x1 = x2 - x1
 
 #----------
 
-saidaAlbedoSuper = driver.Create('albedoSuperficie.tif',colunas,linhas,1,GDT_Float64)
-if saidaAlbedoSuper is None:
-    print 'Erro ao criar o arquivo: ' + 'albedoSuperficie.tif'
-    sys.exit(1)
+pastaSaida = 'S-SEBI-Block__'+nomeArquivoEntrada+'/'
 
-saidaNDVI = driver.Create('ndvi.tif',colunas,linhas,1,GDT_Float64)
+try:
+    os.mkdir(pastaSaida)
+except:
+    print 'Diretorio: ' + pastaSaida + ' Já existe.'
+    print 'Recriando arquivos, se existir.'
+
+#----------
+
+saidaNDVI = driver.Create(pastaSaida+'ndvi.tif',colunas,linhas,1,GDT_Float64)
 if saidaNDVI is None:
     print 'Erro ao criar o arquivo: ' + 'ndvi.tif'
     sys.exit(1)
+saidaNDVI.SetProjection(projecao)
 
-saidaSAVI = driver.Create('savi.tif',colunas,linhas,1,GDT_Float64)
+saidaAlbedoSuper = driver.Create(pastaSaida+'albedoSuperficie.tif',colunas,linhas,1,GDT_Float64)
+if saidaAlbedoSuper is None:
+    print 'Erro ao criar o arquivo: ' + 'albedoSuperficie.tif'
+    sys.exit(1)
+saidaAlbedoSuper.SetProjection(projecao)
+
+saidaSAVI = driver.Create(pastaSaida+'savi.tif',colunas,linhas,1,GDT_Float64)
 if saidaSAVI is None:
     print 'Erro ao criar o arquivo: ' + 'savi.tif'
     sys.exit(1)
+saidaSAVI.SetProjection(projecao)
 
-saidaIAF = driver.Create('iaf.tif',colunas,linhas,1,GDT_Float64)
+saidaIAF = driver.Create(pastaSaida+'iaf.tif',colunas,linhas,1,GDT_Float64)
 if saidaIAF is None:
     print 'Erro ao criar o arquivo: ' + 'iaf.tif'
     sys.exit(1)
+saidaIAF.SetProjection(projecao)
 
-saidaTempSuper = driver.Create('temperatura_superficie.tif',colunas,linhas,1,GDT_Float64)
+saidaTempSuper = driver.Create(pastaSaida+'temperatura_superficie.tif',colunas,linhas,1,GDT_Float64)
 if saidaTempSuper is None:
     print 'Erro ao criar o arquivo: ' + 'temperatura_superficie.tif'
     sys.exit(1)
+saidaTempSuper.SetProjection(projecao)
 
-saidaSaldoRad = driver.Create('saldoRadiacao.tif',colunas,linhas,1,GDT_Float64)
+saidaSaldoRad = driver.Create(pastaSaida+'saldoRadiacao.tif',colunas,linhas,1,GDT_Float64)
 if saidaSaldoRad is None:
     print 'Erro ao criar o arquivo: ' + 'saldoRadiacao.tif'
     sys.exit(1)
+saidaSaldoRad.SetProjection(projecao)
 
-saidaFluxoCalSolo = driver.Create('fluxoCalorSolo.tif',colunas,linhas,1,GDT_Float64)
+saidaFluxoCalSolo = driver.Create(pastaSaida+'fluxoCalorSolo.tif',colunas,linhas,1,GDT_Float64)
 if saidaFluxoCalSolo is None:
     print 'Erro ao criar o arquivo: ' + 'fluxoCalorSolo.tif'
     sys.exit(1)
+saidaFluxoCalSolo.SetProjection(projecao)
 
 #----------
 
@@ -291,20 +309,23 @@ c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1
 
 #----------
 
-saidaFracEvapo = driver.Create('fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float64)
+saidaFracEvapo = driver.Create(pastaSaida+'fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float64)
 if saidaFracEvapo is None:
     print 'Erro ao criar o arquivo: ' + 'fracaoEvaporativa.tif'
     sys.exit(1)
+saidaFracEvapo.SetProjection(projecao)
 
-saidaFluxCalSensi = driver.Create('fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float64)
+saidaFluxCalSensi = driver.Create(pastaSaida+'fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float64)
 if saidaFluxCalSensi is None:
     print 'Erro ao criar o arquivo: ' + 'fluxoCalorSensivel.tif'
     sys.exit(1)
+saidaFluxCalSensi.SetProjection(projecao)
 
-saidaFluxCalLaten = driver.Create('fluxoCalorLatente.tif',colunas,linhas,1,GDT_Float64)
+saidaFluxCalLaten = driver.Create(pastaSaida+'fluxoCalorLatente.tif',colunas,linhas,1,GDT_Float64)
 if saidaFluxCalLaten is None:
     print 'Erro ao criar o arquivo: ' + 'fluxoCalorLatente.tif'
     sys.exit(1)
+saidaFluxCalLaten.SetProjection(projecao)
 
 #----------
 
