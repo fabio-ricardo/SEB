@@ -182,21 +182,21 @@ EscreveResult(G,'FluxoDeCalorNoSolo.tif')
 
 #Encontrando 3 pixels ancoras quentes e frios
 
-THot1 = 0
-THot2 = 0
-THot3 = 0
+THot1 = T.GetMinimum()
+THot2 = T.GetMinimum()
+THot3 = T.GetMinimum()
 
-TCold1 = 500
-TCold2 = 500
-TCold3 = 500
+TCold1 = T.GetMaximum()
+TCold2 = T.GetMaximum()
+TCold3 = T.GetMaximum()
 
-NDVIHot1 = 1
-NDVIHot2 = 1
-NDVIHot3 = 1
+NDVIHot1 = NDVI.GetMaximum()
+NDVIHot2 = NDVI.GetMaximum()
+NDVIHot3 = NDVI.GetMaximum()
 
-NDVICold1 = -10
-NDVICold2 = -10
-NDVICold3 = -10
+NDVICold1 = NDVI.GetMinimum()
+NDVICold2 = NDVI.GetMinimum()
+NDVICold3 = NDVI.GetMinimum()
 
 
 for i in range(0,linhas):
