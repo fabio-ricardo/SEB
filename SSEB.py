@@ -149,7 +149,13 @@ P4 = None
 P3 = None
 
 #Indice area foliar
-IAF = (numpy.log((0.69 - SAVI)/ 0.59)/0.91) * (-1) 
+numpy.seterr(all='ignore')
+
+maskLog = ((0.69 - SAVI) / 0.59) > 0
+
+IAF = numpy.choose(maskLog, (0.0, -1 * (numpy.log((0.69 - SAVI) / 0.59) / 0.91)))
+
+numpy.seterr(all='warn')
 SAVI = None
 
 #Emissividade
@@ -182,23 +188,24 @@ EscreveResult(G,'FluxoDeCalorNoSolo.tif')
 
 #Encontrando 3 pixels ancoras quentes e frios
 
-THot1 = np.amin(T)
-THot2 = np.amin(T)
-THot3 = np.amin(T)
+THot1 = nanmin(T)
+THot2 = nanmin(T)
+THot3 = nanmin(T)
 
-TCold1 = np.amax(T)
-TCold2 = np.amax(T)
-TCold3 = np.amax(T)
+TCold1 = nanmax(T)
+TCold2 = nanmax(T)
+TCold3 = nanmax(T)
 
-NDVIHot1 = np.amax(NDVI)
-NDVIHot2 = np.amax(NDVI)
-NDVIHot3 = np.amax(NDVI)
+NDVIHot1 = nanmax(NDVI)
+NDVIHot2 = nanmax(NDVI)
+NDVIHot3 = nanmax(NDVI)
 
-NDVICold1 = np.amin(NDVI)
-NDVICold2 = np.amin(NDVI)
-NDVICold3 = np.amin(NDVI)
+NDVICold1 = nanmin(NDVI)
+NDVICold2 = nanmin(NDVI)
+NDVICold3 = nanmin(NDVI)
 
-
+l = []
+l2 = []
 for i in range(0,linhas):
 	for j in range(0,colunas):
 		if not(NDVI[i,j] == None):
@@ -211,7 +218,7 @@ for i in range(0,linhas):
 				
 				THot1 = T[i,j]
 				NDVIHot1 = NDVI[i,j]
-				
+				l.append(NDVI[i,j])
 				NDVI[i,j] = None
 			
 			if not(NDVI[i,j] == None) and NDVI[i,j] >= NDVICold1	and T[i,j] <= TCold1:
@@ -223,7 +230,7 @@ for i in range(0,linhas):
 				
 				TCold1 = T[i,j]
 				NDVICold1 = NDVI[i,j]
-				
+				l2.append(NDVI[i,j])
 				NDVI[i,j] = None
 
 
@@ -231,6 +238,17 @@ TH = (THot1 + THot2 + THot3)/3
 TC = (TCold1 + TCold2 + TCold3)/3
 NDVI = None
 
+print THot1 
+print THot2 
+print THot3
+print l[-3], l[-2], l[-1]
+
+
+print TCold1 
+print TCold2 
+print TCold3
+print l2[-3], l2[-2], l2[-1]
+'''
 #Fracao de evapotranspiracao
 ETf = (TH - T)/(TH - TC)
 EscreveResult(ETf,'FracaoEvapotranspiracao.tif')
@@ -260,7 +278,7 @@ ETa = ETf * ET0
 EscreveResult(ETa,'EvapotranspiracaoAtual.tif')
 ET0 = None
 ETf = None
-ETa = None
+ETa = None'''
 
 fim = time.time()
 print 'Tempo total: '+str(fim - inicio)
