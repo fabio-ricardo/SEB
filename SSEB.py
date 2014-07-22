@@ -84,99 +84,126 @@ def EscreveResult(arq, nome):
 	
 #Radiancia e reflectancia
 banda = img.GetRasterBand(1).ReadAsArray()
-L1 = a1 + ((b1 - a1)/255)* banda
-P1 = (math.pi * L1)/(k1 * math.cos(angle)*d)
+mask = banda > 0
+L1 = numpy.choose(mask, (-999.9, a1 + ((b1 - a1)/255)* banda))
+mask = not(L1 == -999.9)
+P1 = numpy.choose(mask, (-999.9, (math.pi * L1)/(k1 * math.cos(angle)*d)))
 banda = None
-AlPlan = 0.293*P1
+mask = not(P1 == -999.9)
+AlPlan = numpy.choose(mask,(-99.9, 0.293*P1))
 L1 = None
 P1 = None
 
 banda = img.GetRasterBand(2).ReadAsArray()
-L2 = a2 + ((b2 - a2)/255)* banda
-P2 = (math.pi * L2)/(k2 * math.cos(angle)*d)
+mask = banda > 0
+L2 = numpy.choose(mask, (-999.9, a2 + ((b2 - a2)/255)* banda))
+mask = not(L2 == -999.9)
+P2 = numpy.choose(mask, (-999.9, (math.pi * L2)/(k2 * math.cos(angle)*d)))
 banda = None
-AlPlan = AlPlan + 0.274*P2
+mask = not(P2 == -999.9)
+AlPlan = numpy.choose(mask, (-999.9, AlPlan + 0.274*P2))
 L2 = None
 P2 = None
 
 banda = img.GetRasterBand(3).ReadAsArray()
-L3 = a3 + ((b3 - a3)/255)* banda
-P3 = (math.pi * L3)/(k3 * math.cos(angle)*d)
+mask = banda > 0
+L3 = numpy.choose(mask, (-999.9, a3 + ((b3 - a3)/255)* banda))
+mask = not(L3 == -999.9)
+P3 = numpy.choose(mask, (-999.9, (math.pi * L3)/(k3 * math.cos(angle)*d)))
 banda = None
-AlPlan = AlPlan + 0.233*P3
+mask = not(P3 == -999.9)
+AlPlan = numpy.choose(mask, (-999.9, AlPlan + 0.233*P3))
 L3 = None
 
 banda = img.GetRasterBand(4).ReadAsArray()		
-L4 = a4 + ((b4 - a4)/255)* banda
-P4 = (math.pi * L4)/(k4 * math.cos(angle)*d)
+mask = banda > 0
+L4 = numpy.choose(mask, (-999.9, a4 + ((b4 - a4)/255)* banda))
+mask = not(L4 == -999.9)
+P4 = numpy.choose(mask, (-999.9, (math.pi * L4)/(k4 * math.cos(angle)*d)))
 banda = None
-AlPlan = AlPlan+ 0.157*P4
+mask = not(P4 == -999.9)
+AlPlan = numpy.choose(mask, (-999.9, AlPlan+ 0.157*P4))
 L4 = None
 
 
 banda = img.GetRasterBand(5).ReadAsArray()
-L5 = a5 + ((b5 - a5)/255)* banda
-P5 = (math.pi * L5)/(k5 * math.cos(angle)*d)
+mask = banda > 0
+L5 = numpy.choose(mask, (-999.9, a5 + ((b5 - a5)/255)* banda))
+mask = not(L5 == -999.9)
+P5 = numpy.choose(mask, (-999.9, (math.pi * L5)/(k5 * math.cos(angle)*d)))
 banda = None
-AlPlan = AlPlan + 0.033*P5
+mask = not(P5 == -999.9)
+AlPlan = numpy.choose(mask, (-999.9, AlPlan + 0.033*P5))
 L5 = None
 P5 = None
 
 banda = img.GetRasterBand(6).ReadAsArray()
-L6 = a6 + ((b6 - a6)/255)* banda
+mask = banda > 0
+L6 = numpy.choose(mask, (-999.9, a6 + ((b6 - a6)/255)* banda))
 banda = None
 
 banda = img.GetRasterBand(7).ReadAsArray()
-L7 = a7 + ((b7 - a7)/255)* banda
-P7 = (math.pi * L7)/(k7 * math.cos(angle)*d)
+mask = banda > 0
+L7 = numpy.choose(mask, (-999.9, a7 + ((b7 - a7)/255)* banda))
+mask = not(L7 == -999.9)
+P7 = numpy.choose(mask, (-999.9, (math.pi * L7)/(k7 * math.cos(angle)*d)))
 banda = None
 img = None
-AlPlan = AlPlan+ 0.011*P7
+mask = not(P7 == -999.9)
+AlPlan = numpy.choose(mask, (-999.9, AlPlan+ 0.011*P7))
 L7 = None
 P7 = None
 
 #Albedo superficie(deve-se imprimir em porcentagem)
-AlSuper = (AlPlan - 0.03)* (1/((0.75 +0.00002*z)*(0.75 +0.00002*z)))
+mask = not(AlPlan == -999.9)
+AlSuper = numpy.choose(mask,(-999.9, (AlPlan - 0.03)/((0.75 +0.00002*z)*(0.75 +0.00002*z))))
 AlPlan = None
 
 #indice de Vegetacao da Diferenca Normalizada
-NDVI = (P4 - P3) / (P4+ P3)	
+mask = ((((P4 - P3) / (P4+ P3))	>= -1) and (((P4 - P3) / (P4+ P3))<= 1)) and not(P4 == -999.9) and not(P3 == -999.9)
+NDVI = numpy.choose(mask, (-999.9, (P4 - P3) / (P4+ P3)))	
 EscreveResult(NDVI,'NDVI.tif')
 	
 #indice de Vegetacao Ajustado para os Efeitos do Solo
-SAVI = ((1+0.5)*(P4-P3))/(0.5+P4+P3)
+mask = not(P4 == -999.9) or not(P3 == -999.9)
+SAVI = numpy.choose(mask, (-999.9, ((1+0.5)*(P4-P3))/(0.5+P4+P3)))
 P4 = None
 P3 = None
 
 #Indice area foliar
 numpy.seterr(all='ignore')
 
-maskLog = ((0.69 - SAVI) / 0.59) > 0
+maskLog = (((0.69 - SAVI) / 0.59) > 0) and not(SAVI == -999.9)
 
-IAF = numpy.choose(maskLog, (0.0, -1 * (numpy.log((0.69 - SAVI) / 0.59) / 0.91)))
+IAF = numpy.choose(maskLog, (-999.9, -1 * (numpy.log((0.69 - SAVI) / 0.59) / 0.91)))
 
 numpy.seterr(all='warn')
 SAVI = None
 
 #Emissividade
-Enb = 0.97 + 0.00331* IAF
-E0 = 0.95 + 0.01 * IAF
+mask = not(IAF == -999.9) and (((0.97 + 0.00331* IAF) >=0) and ((0.97 + 0.00331* IAF) <= 1))
+Enb = numpy.choose(mask, (-999.9, 0.97 + 0.00331* IAF))
+mask = not(IAF == -999.9) and (((0.95 + 0.01 * IAF) >=0) and ((0.95 + 0.01 * IAF) <= 1))
+E0 = numpy.choose(mask, (-999.9, 0.95 + 0.01 * IAF))
 IAF = None
 
 #Temperatura satelite (K)
-T = 1260.56/(numpy.log((Enb*607.76/L6) +1))
+mask = not(Enb == -999.9) and not(L6 == -999.9) and ((Enb*607.76/L6) +1) > 0
+T = numpy.choose(mask, (-999.9, 1260.56/(numpy.log((Enb*607.76/L6) +1))))
 L6 = None
 Enb = None
 EscreveResult(T,'Temperatura.tif')
 
 #fluxo radiacao termal emitida 
+mask = not(T == -999.9) and not (E0 == -999.9)
 Frt_emit= E0*0.0000000567*T*T*T*T		
 
 #Radiacao onda curta incidente
 Rs = 1367 * math.cos(angle)*(0.75 +0.00002*z)*d
 		
 #Saldo da radiacao
-Rn = (1 - AlSuper)*Rs + Rol_atm - Frt_emit - (1 - E0)*Rol_atm
+mask = not(AlSuper == -999.9) and not(Frt_emit == -999.9)
+Rn = numpy.choose(mask, (-999.9, (1 - AlSuper)*Rs + Rol_atm - Frt_emit - (1 - E0)*Rol_atm))
 Frt_emit = None
 E0 = None
 EscreveResult(Rn,'SaldoRadiacao.tif')
@@ -204,10 +231,8 @@ NDVICold1 = nanmin(NDVI)
 NDVICold2 = nanmin(NDVI)
 NDVICold3 = nanmin(NDVI)
 
-l = []
-l2 = []
-for i in range(0,linhas):
-	for j in range(0,colunas):
+for i in xrange(0,linhas):
+	for j in xrange(0,colunas):
 		if not(NDVI[i,j] == None):
 			if NDVI[i,j] <= NDVIHot1 and T[i,j] >= THot1:
 				THot3 = THot2
@@ -218,7 +243,7 @@ for i in range(0,linhas):
 				
 				THot1 = T[i,j]
 				NDVIHot1 = NDVI[i,j]
-				l.append(NDVI[i,j])
+
 				NDVI[i,j] = None
 			
 			if not(NDVI[i,j] == None) and NDVI[i,j] >= NDVICold1	and T[i,j] <= TCold1:
@@ -230,7 +255,7 @@ for i in range(0,linhas):
 				
 				TCold1 = T[i,j]
 				NDVICold1 = NDVI[i,j]
-				l2.append(NDVI[i,j])
+
 				NDVI[i,j] = None
 
 
@@ -238,16 +263,6 @@ TH = (THot1 + THot2 + THot3)/3
 TC = (TCold1 + TCold2 + TCold3)/3
 NDVI = None
 
-print THot1 
-print THot2 
-print THot3
-print l[-3], l[-2], l[-1]
-
-
-print TCold1 
-print TCold2 
-print TCold3
-print l2[-3], l2[-2], l2[-1]
 '''
 #Fracao de evapotranspiracao
 ETf = (TH - T)/(TH - TC)
