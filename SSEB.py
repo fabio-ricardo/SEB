@@ -264,3 +264,4 @@ ETa = None
 
 fim = time.time()
 print 'Tempo total: '+str(fim - inicio)
+
