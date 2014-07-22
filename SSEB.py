@@ -63,7 +63,7 @@ Ea = 0.85 * math.pow(-1*math.log((0.75 +0.00002*z)),0.09)
 Rol_atm = Ea * 0.0000000567 * math.pow(Ta +273.15,4)
 
 #Abrindo imagem empilhada
-nomeFile = 'mergido.tiff'
+nomeFile = 'empilhada.tif'
 img = gdal.Open(nomeFile,GA_ReadOnly)
 if img is None:
 	print 'Nao foi possivel abrir a imagem.'
@@ -182,21 +182,21 @@ EscreveResult(G,'FluxoDeCalorNoSolo.tif')
 
 #Encontrando 3 pixels ancoras quentes e frios
 
-THot1 = T.GetMinimum()
-THot2 = T.GetMinimum()
-THot3 = T.GetMinimum()
+THot1 = np.amin(T)
+THot2 = np.amin(T)
+THot3 = np.amin(T)
 
-TCold1 = T.GetMaximum()
-TCold2 = T.GetMaximum()
-TCold3 = T.GetMaximum()
+TCold1 = np.amax(T)
+TCold2 = np.amax(T)
+TCold3 = np.amax(T)
 
-NDVIHot1 = NDVI.GetMaximum()
-NDVIHot2 = NDVI.GetMaximum()
-NDVIHot3 = NDVI.GetMaximum()
+NDVIHot1 = np.amax(NDVI)
+NDVIHot2 = np.amax(NDVI)
+NDVIHot3 = np.amax(NDVI)
 
-NDVICold1 = NDVI.GetMinimum()
-NDVICold2 = NDVI.GetMinimum()
-NDVICold3 = NDVI.GetMinimum()
+NDVICold1 = np.amin(NDVI)
+NDVICold2 = np.amin(NDVI)
+NDVICold3 = np.amin(NDVI)
 
 
 for i in range(0,linhas):
