@@ -161,12 +161,11 @@ AlSuper = numpy.choose(mask,(-999.9, (AlPlan - 0.03)/((0.75 +0.00002*z)*(0.75 +0
 AlPlan = None
 
 #indice de Vegetacao da Diferenca Normalizada
-mask = ((((P4 - P3) / (P4+ P3))	>= -1) and (((P4 - P3) / (P4+ P3))<= 1)) and P4 <> -999.9 and P3 <> -999.9
+mask =  (math.fabs(P4) + math.fabs(P3))  < 999.9
 NDVI = numpy.choose(mask, (-999.9, (P4 - P3) / (P4+ P3)))	
 EscreveResult(NDVI,'NDVI.tif')
 	
 #indice de Vegetacao Ajustado para os Efeitos do Solo
-mask = P4 <> -999.9 or P3 <> -999.9
 SAVI = numpy.choose(mask, (-999.9, ((1+0.5)*(P4-P3))/(0.5+P4+P3)))
 P4 = None
 P3 = None
@@ -174,7 +173,7 @@ P3 = None
 #Indice area foliar
 #numpy.seterr(all='ignore')
 
-maskLog = (((0.69 - SAVI) / 0.59) > 0) and SAVI <> -999.9
+maskLog = (((0.69 - SAVI) / 0.59) > 0) 
 
 IAF = numpy.choose(maskLog, (-999.9, -1 * (numpy.log((0.69 - SAVI) / 0.59) / 0.91)))
 
@@ -182,35 +181,34 @@ IAF = numpy.choose(maskLog, (-999.9, -1 * (numpy.log((0.69 - SAVI) / 0.59) / 0.9
 SAVI = None
 
 #Emissividade
-mask = IAF <> -999.9 and (((0.97 + 0.00331* IAF) >=0) and ((0.97 + 0.00331* IAF) <= 1))
+mask = IAF <> -999.9
 Enb = numpy.choose(mask, (-999.9, 0.97 + 0.00331* IAF))
-mask = IAF <> -999.9 and (((0.95 + 0.01 * IAF) >=0) and ((0.95 + 0.01 * IAF) <= 1))
 E0 = numpy.choose(mask, (-999.9, 0.95 + 0.01 * IAF))
 IAF = None
 
 #Temperatura satelite (K)
-mask = Enb <> -999.9 and L6 <> -999.9 and ((Enb*607.76/L6) +1) > 0
+mask = (math.fabs(Enb) + math.fabs(L6))  < 999.9
 T = numpy.choose(mask, (-999.9, 1260.56/(numpy.log((Enb*607.76/L6) +1))))
 L6 = None
 Enb = None
 EscreveResult(T,'Temperatura.tif')
 
 #fluxo radiacao termal emitida 
-mask = T <> -999.9 and E0 <> -999.9
+mask = math.fabs(T) + math.fabs(E0) < 999.9
 Frt_emit= E0*0.0000000567*T*T*T*T		
 
 #Radiacao onda curta incidente
 Rs = 1367 * math.cos(angle)*(0.75 +0.00002*z)*d
 		
 #Saldo da radiacao
-mask = AlSuper <> -999.9 and Frt_emit <> -999.9
+mask = (math.fabs(AlSuper) + math.fabs(Frt_emit)) < 999.9
 Rn = numpy.choose(mask, (-999.9, (1 - AlSuper)*Rs + Rol_atm - Frt_emit - (1 - E0)*Rol_atm))
 Frt_emit = None
 E0 = None
 EscreveResult(Rn,'SaldoRadiacao.tif')
 
 #Fluxo de calor no solo	
-mask = AlSuper <> -999.9 and T <> -999.9 and NDVI <> -999.9 and Rn <> -999.9
+mask = math.fabs(AlSuper) + math.fabs(T) + math.fabs(NDVI)+ math.fabs(Rn) < 999.9
 G = numpy.choose(mask, (-999.9, ((T - 273.15)*(0.0038 + (0.0074*AlSuper))*(1-0.98*numpy.power(NDVI,4)))*Rn))
 AlSuper = None
 EscreveResult(G,'FluxoDeCalorNoSolo.tif')
@@ -301,7 +299,7 @@ Td = 100 - ((100- UR)/5)
 ea = 6.1078 * math.pow(10,(7.5*Td)/(237.3 + Td))
 
 #Evapotranspiracao atual
-mask = Rn <> -999.9 and G <> -999.9
+mask = (math.fabs(Rn) + math.fabs(G)) < 999.9
 ET0 = numpy.choose(mask, (-999.9, (0.408 * delta * (Rn - G) + gama * (900/(Ta + 273.15))*u2*(es - ea)) /(delta + gama*(1 + 0.34*u2))))
 mask = ET0 <> -999.9
 ETa = ETf * ET0
