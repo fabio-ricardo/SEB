@@ -161,7 +161,7 @@ AlSuper = numpy.choose(mask,(-999.9, (AlPlan - 0.03)/((0.75 +0.00002*z)*(0.75 +0
 AlPlan = None
 
 #indice de Vegetacao da Diferenca Normalizada
-mask =  (math.fabs(P4) + math.fabs(P3))  < 999.9
+mask =  (abs(P4) + abs(P3))  < 999.9
 NDVI = numpy.choose(mask, (-999.9, (P4 - P3) / (P4+ P3)))	
 EscreveResult(NDVI,'NDVI.tif')
 	
@@ -187,28 +187,28 @@ E0 = numpy.choose(mask, (-999.9, 0.95 + 0.01 * IAF))
 IAF = None
 
 #Temperatura satelite (K)
-mask = (math.fabs(Enb) + math.fabs(L6))  < 999.9
+mask = (abs(Enb) + abs(L6))  < 999.9
 T = numpy.choose(mask, (-999.9, 1260.56/(numpy.log((Enb*607.76/L6) +1))))
 L6 = None
 Enb = None
 EscreveResult(T,'Temperatura.tif')
 
 #fluxo radiacao termal emitida 
-mask = math.fabs(T) + math.fabs(E0) < 999.9
+mask = abs(T) + abs(E0) < 999.9
 Frt_emit= E0*0.0000000567*T*T*T*T		
 
 #Radiacao onda curta incidente
 Rs = 1367 * math.cos(angle)*(0.75 +0.00002*z)*d
 		
 #Saldo da radiacao
-mask = (math.fabs(AlSuper) + math.fabs(Frt_emit)) < 999.9
+mask = (abs(AlSuper) + abs(Frt_emit)) < 999.9
 Rn = numpy.choose(mask, (-999.9, (1 - AlSuper)*Rs + Rol_atm - Frt_emit - (1 - E0)*Rol_atm))
 Frt_emit = None
 E0 = None
 EscreveResult(Rn,'SaldoRadiacao.tif')
 
 #Fluxo de calor no solo	
-mask = math.fabs(AlSuper) + math.fabs(T) + math.fabs(NDVI)+ math.fabs(Rn) < 999.9
+mask = abs(AlSuper) + abs(T) + abs(NDVI)+ abs(Rn) < 999.9
 G = numpy.choose(mask, (-999.9, ((T - 273.15)*(0.0038 + (0.0074*AlSuper))*(1-0.98*numpy.power(NDVI,4)))*Rn))
 AlSuper = None
 EscreveResult(G,'FluxoDeCalorNoSolo.tif')
@@ -235,7 +235,7 @@ l1 =[]
 l2 =[]
 for i in xrange(0,linhas):
 	for j in xrange(0,colunas):
-		if not(NDVI[i,j] == None) and not(NDVI == -999.9) and not(T == -999.9):
+		if NDVI[i,j] <> None and NDVI[i,j] <> -999.9 and (T[i,j] <> -999.9):
 			if NDVI[i,j] <= NDVIHot1 and T[i,j] >= THot1:
 				THot3 = THot2
 				NDVIHot3 = NDVIHot2
@@ -248,7 +248,7 @@ for i in xrange(0,linhas):
 				l1.append(NDVI[i,j])
 				NDVI[i,j] = None
 			
-			if not(NDVI[i,j] == None) and NDVI[i,j] >= NDVICold1	and T[i,j] <= TCold1:
+			if NDVI[i,j] <> None and NDVI[i,j] >= NDVICold1	and T[i,j] <= TCold1:
 				TCold3 = TCold2
 				NDVICold3 = NDVICold2
 				
@@ -299,7 +299,7 @@ Td = 100 - ((100- UR)/5)
 ea = 6.1078 * math.pow(10,(7.5*Td)/(237.3 + Td))
 
 #Evapotranspiracao atual
-mask = (math.fabs(Rn) + math.fabs(G)) < 999.9
+mask = (abs(Rn) + abs(G)) < 999.9
 ET0 = numpy.choose(mask, (-999.9, (0.408 * delta * (Rn - G) + gama * (900/(Ta + 273.15))*u2*(es - ea)) /(delta + gama*(1 + 0.34*u2))))
 mask = ET0 <> -999.9
 ETa = ETf * ET0
