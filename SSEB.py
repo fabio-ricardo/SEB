@@ -83,13 +83,14 @@ def EscreveResult(arq, nome):
 	outDataSet = None
 	
 #Radiancia e reflectancia
+numpy.seterr(all='ignore')
 banda = img.GetRasterBand(1).ReadAsArray()
 mask = banda > 0
 L1 = numpy.choose(mask, (-999.9, a1 + ((b1 - a1)/255)* banda))
-mask = not(L1 == -999.9)
+mask = L1 <> -999.9
 P1 = numpy.choose(mask, (-999.9, (math.pi * L1)/(k1 * math.cos(angle)*d)))
 banda = None
-mask = not(P1 == -999.9)
+mask = P1 <> -999.9
 AlPlan = numpy.choose(mask,(-99.9, 0.293*P1))
 L1 = None
 P1 = None
@@ -97,10 +98,10 @@ P1 = None
 banda = img.GetRasterBand(2).ReadAsArray()
 mask = banda > 0
 L2 = numpy.choose(mask, (-999.9, a2 + ((b2 - a2)/255)* banda))
-mask = not(L2 == -999.9)
+mask = L2 <> -999.9
 P2 = numpy.choose(mask, (-999.9, (math.pi * L2)/(k2 * math.cos(angle)*d)))
 banda = None
-mask = not(P2 == -999.9)
+mask = P2 <> -999.9
 AlPlan = numpy.choose(mask, (-999.9, AlPlan + 0.274*P2))
 L2 = None
 P2 = None
@@ -108,20 +109,20 @@ P2 = None
 banda = img.GetRasterBand(3).ReadAsArray()
 mask = banda > 0
 L3 = numpy.choose(mask, (-999.9, a3 + ((b3 - a3)/255)* banda))
-mask = not(L3 == -999.9)
+mask = L3 <> -999.9
 P3 = numpy.choose(mask, (-999.9, (math.pi * L3)/(k3 * math.cos(angle)*d)))
 banda = None
-mask = not(P3 == -999.9)
+mask = P3 <> -999.9
 AlPlan = numpy.choose(mask, (-999.9, AlPlan + 0.233*P3))
 L3 = None
 
 banda = img.GetRasterBand(4).ReadAsArray()		
 mask = banda > 0
 L4 = numpy.choose(mask, (-999.9, a4 + ((b4 - a4)/255)* banda))
-mask = not(L4 == -999.9)
+mask = L4 <> -999.9
 P4 = numpy.choose(mask, (-999.9, (math.pi * L4)/(k4 * math.cos(angle)*d)))
 banda = None
-mask = not(P4 == -999.9)
+mask = P4 <> -999.9
 AlPlan = numpy.choose(mask, (-999.9, AlPlan+ 0.157*P4))
 L4 = None
 
@@ -129,10 +130,10 @@ L4 = None
 banda = img.GetRasterBand(5).ReadAsArray()
 mask = banda > 0
 L5 = numpy.choose(mask, (-999.9, a5 + ((b5 - a5)/255)* banda))
-mask = not(L5 == -999.9)
+mask = L5 <> -999.9
 P5 = numpy.choose(mask, (-999.9, (math.pi * L5)/(k5 * math.cos(angle)*d)))
 banda = None
-mask = not(P5 == -999.9)
+mask = P5 <> -999.9
 AlPlan = numpy.choose(mask, (-999.9, AlPlan + 0.033*P5))
 L5 = None
 P5 = None
@@ -145,95 +146,98 @@ banda = None
 banda = img.GetRasterBand(7).ReadAsArray()
 mask = banda > 0
 L7 = numpy.choose(mask, (-999.9, a7 + ((b7 - a7)/255)* banda))
-mask = not(L7 == -999.9)
+mask = L7 <> -999.9
 P7 = numpy.choose(mask, (-999.9, (math.pi * L7)/(k7 * math.cos(angle)*d)))
 banda = None
 img = None
-mask = not(P7 == -999.9)
+mask = P7 <> -999.9
 AlPlan = numpy.choose(mask, (-999.9, AlPlan+ 0.011*P7))
 L7 = None
 P7 = None
 
 #Albedo superficie(deve-se imprimir em porcentagem)
-mask = not(AlPlan == -999.9)
+mask = AlPlan <> -999.9
 AlSuper = numpy.choose(mask,(-999.9, (AlPlan - 0.03)/((0.75 +0.00002*z)*(0.75 +0.00002*z))))
 AlPlan = None
 
 #indice de Vegetacao da Diferenca Normalizada
-mask = ((((P4 - P3) / (P4+ P3))	>= -1) and (((P4 - P3) / (P4+ P3))<= 1)) and not(P4 == -999.9) and not(P3 == -999.9)
+mask = ((((P4 - P3) / (P4+ P3))	>= -1) and (((P4 - P3) / (P4+ P3))<= 1)) and P4 <> -999.9 and P3 <> -999.9
 NDVI = numpy.choose(mask, (-999.9, (P4 - P3) / (P4+ P3)))	
 EscreveResult(NDVI,'NDVI.tif')
 	
 #indice de Vegetacao Ajustado para os Efeitos do Solo
-mask = not(P4 == -999.9) or not(P3 == -999.9)
+mask = P4 <> -999.9 or P3 <> -999.9
 SAVI = numpy.choose(mask, (-999.9, ((1+0.5)*(P4-P3))/(0.5+P4+P3)))
 P4 = None
 P3 = None
 
 #Indice area foliar
-numpy.seterr(all='ignore')
+#numpy.seterr(all='ignore')
 
-maskLog = (((0.69 - SAVI) / 0.59) > 0) and not(SAVI == -999.9)
+maskLog = (((0.69 - SAVI) / 0.59) > 0) and SAVI <> -999.9
 
 IAF = numpy.choose(maskLog, (-999.9, -1 * (numpy.log((0.69 - SAVI) / 0.59) / 0.91)))
 
-numpy.seterr(all='warn')
+#numpy.seterr(all='warn')
 SAVI = None
 
 #Emissividade
-mask = not(IAF == -999.9) and (((0.97 + 0.00331* IAF) >=0) and ((0.97 + 0.00331* IAF) <= 1))
+mask = IAF <> -999.9 and (((0.97 + 0.00331* IAF) >=0) and ((0.97 + 0.00331* IAF) <= 1))
 Enb = numpy.choose(mask, (-999.9, 0.97 + 0.00331* IAF))
-mask = not(IAF == -999.9) and (((0.95 + 0.01 * IAF) >=0) and ((0.95 + 0.01 * IAF) <= 1))
+mask = IAF <> -999.9 and (((0.95 + 0.01 * IAF) >=0) and ((0.95 + 0.01 * IAF) <= 1))
 E0 = numpy.choose(mask, (-999.9, 0.95 + 0.01 * IAF))
 IAF = None
 
 #Temperatura satelite (K)
-mask = not(Enb == -999.9) and not(L6 == -999.9) and ((Enb*607.76/L6) +1) > 0
+mask = Enb <> -999.9 and L6 <> -999.9 and ((Enb*607.76/L6) +1) > 0
 T = numpy.choose(mask, (-999.9, 1260.56/(numpy.log((Enb*607.76/L6) +1))))
 L6 = None
 Enb = None
 EscreveResult(T,'Temperatura.tif')
 
 #fluxo radiacao termal emitida 
-mask = not(T == -999.9) and not (E0 == -999.9)
+mask = T <> -999.9 and E0 <> -999.9
 Frt_emit= E0*0.0000000567*T*T*T*T		
 
 #Radiacao onda curta incidente
 Rs = 1367 * math.cos(angle)*(0.75 +0.00002*z)*d
 		
 #Saldo da radiacao
-mask = not(AlSuper == -999.9) and not(Frt_emit == -999.9)
+mask = AlSuper <> -999.9 and Frt_emit <> -999.9
 Rn = numpy.choose(mask, (-999.9, (1 - AlSuper)*Rs + Rol_atm - Frt_emit - (1 - E0)*Rol_atm))
 Frt_emit = None
 E0 = None
 EscreveResult(Rn,'SaldoRadiacao.tif')
 
 #Fluxo de calor no solo	
-G = ((T - 273.15)*(0.0038 + (0.0074*AlSuper))*(1-0.98*numpy.power(NDVI,4)))*Rn
+mask = AlSuper <> -999.9 and T <> -999.9 and NDVI <> -999.9 and Rn <> -999.9
+G = numpy.choose(mask, (-999.9, ((T - 273.15)*(0.0038 + (0.0074*AlSuper))*(1-0.98*numpy.power(NDVI,4)))*Rn))
 AlSuper = None
 EscreveResult(G,'FluxoDeCalorNoSolo.tif')
 
 #Encontrando 3 pixels ancoras quentes e frios
+mask = T  <> -999.9
+THot1 = nanmin(T[mask])
+THot2 = nanmin(T[mask])
+THot3 = nanmin(T[mask])
 
-THot1 = nanmin(T)
-THot2 = nanmin(T)
-THot3 = nanmin(T)
+TCold1 = nanmax(T[mask])
+TCold2 = nanmax(T[mask])
+TCold3 = nanmax(T[mask])
 
-TCold1 = nanmax(T)
-TCold2 = nanmax(T)
-TCold3 = nanmax(T)
+mask = NDVI <> -999.9
+NDVIHot1 = nanmax(NDVI[mask])
+NDVIHot2 = nanmax(NDVI[mask])
+NDVIHot3 = nanmax(NDVI[mask])
 
-NDVIHot1 = nanmax(NDVI)
-NDVIHot2 = nanmax(NDVI)
-NDVIHot3 = nanmax(NDVI)
-
-NDVICold1 = nanmin(NDVI)
-NDVICold2 = nanmin(NDVI)
-NDVICold3 = nanmin(NDVI)
-
+NDVICold1 = nanmin(NDVI[mask])
+NDVICold2 = nanmin(NDVI[mask])
+NDVICold3 = nanmin(NDVI[mask])
+l1 =[]
+l2 =[]
 for i in xrange(0,linhas):
 	for j in xrange(0,colunas):
-		if not(NDVI[i,j] == None):
+		if not(NDVI[i,j] == None) and not(NDVI == -999.9) and not(T == -999.9):
 			if NDVI[i,j] <= NDVIHot1 and T[i,j] >= THot1:
 				THot3 = THot2
 				NDVIHot3 = NDVIHot2
@@ -243,7 +247,7 @@ for i in xrange(0,linhas):
 				
 				THot1 = T[i,j]
 				NDVIHot1 = NDVI[i,j]
-
+				l1.append(NDVI[i,j])
 				NDVI[i,j] = None
 			
 			if not(NDVI[i,j] == None) and NDVI[i,j] >= NDVICold1	and T[i,j] <= TCold1:
@@ -255,15 +259,24 @@ for i in xrange(0,linhas):
 				
 				TCold1 = T[i,j]
 				NDVICold1 = NDVI[i,j]
-
+				l2.append(NDVI[i,j])
 				NDVI[i,j] = None
 
+print THot1
+print THot2
+print THot3
+print l1[-3], l1[-2], l1[-1]
 
-TH = (THot1 + THot2 + THot3)/3
+print TCold1
+print TCold2
+print TCold3
+print l2[-3], l2[-2], l2[-1]
+numpy.seterr(all='warn')
+'''TH = (THot1 + THot2 + THot3)/3
 TC = (TCold1 + TCold2 + TCold3)/3
 NDVI = None
 
-'''
+
 #Fracao de evapotranspiracao
 ETf = (TH - T)/(TH - TC)
 EscreveResult(ETf,'FracaoEvapotranspiracao.tif')
@@ -288,7 +301,9 @@ Td = 100 - ((100- UR)/5)
 ea = 6.1078 * math.pow(10,(7.5*Td)/(237.3 + Td))
 
 #Evapotranspiracao atual
-ET0 = (0.408 * delta * (Rn - G) + gama * (900/(Ta + 273.15))*u2*(es - ea)) /(delta + gama*(1 + 0.34*u2))
+mask = Rn <> -999.9 and G <> -999.9
+ET0 = numpy.choose(mask, (-999.9, (0.408 * delta * (Rn - G) + gama * (900/(Ta + 273.15))*u2*(es - ea)) /(delta + gama*(1 + 0.34*u2))))
+mask = ET0 <> -999.9
 ETa = ETf * ET0
 EscreveResult(ETa,'EvapotranspiracaoAtual.tif')
 ET0 = None
