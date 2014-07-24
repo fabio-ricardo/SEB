@@ -54,6 +54,9 @@ class Griding:
 		
 		self.close=Button(self.raiz, width=8, command=self.fechar,text='Fechar', bg = 'gray')
 		self.close.grid(row=13, column=2, padx=2, pady=3)
+		
+		Canvas(raiz, width=500, height=500)
+		
 	
 	def erroDigito(self):
 		    showerror("Erro", "Números devem ser inteiros e não nulos!")
