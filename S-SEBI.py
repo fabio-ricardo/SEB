@@ -128,6 +128,10 @@ reflectancia = None
 
 #----------
 
+numpy.seterr(all='ignore')
+
+#----------
+
 saidaNDVI = driver.Create(pastaSaida+'ndvi.tif',colunas,linhas,1,GDT_Float64)
 if saidaNDVI is None:
     print 'Erro ao criar o arquivo: ' + 'ndvi.tif'
@@ -136,8 +140,6 @@ if saidaNDVI is None:
 saidaNDVI.SetProjection(projecao)
 bandaNDVI = saidaNDVI.GetRasterBand(1)
 
-#numpy.seterr(all='ignore')
-
 mask = numpy.logical_and(dados3 > 0, dados4 > 0)
 
 ndvi = numpy.choose(mask, (noValue, (dados4 - dados3) / (dados4 + dados3)))
@@ -145,10 +147,10 @@ bandaNDVI.WriteArray(ndvi,0,0)
 
 bandaNDVI.SetNoDataValue(noValue)
 
-#numpy.seterr(all='warn')
-
 bandaNDVI = None
 saidaNDVI = None
+
+print 'NDVI - Pronto'
 
 #----------
 
@@ -173,6 +175,8 @@ mask = None
 dados4 = None
 dados3 = None
 
+print 'SAVI - Pronto'
+
 #----------
 
 saidaIAF = driver.Create(pastaSaida+'iaf.tif',colunas,linhas,1,GDT_Float64)
@@ -183,8 +187,6 @@ if saidaIAF is None:
 saidaIAF.SetProjection(projecao)
 bandaIAF = saidaIAF.GetRasterBand(1)
 
-#numpy.seterr(all='ignore')
-
 mask = numpy.logical_and(((0.69 - savi) / 0.59) > 0, savi != noValue)
 
 iaf = numpy.choose(mask, (noValue, -1 * (numpy.log((0.69 - savi) / 0.59) / 0.91)))
@@ -193,13 +195,13 @@ bandaIAF.WriteArray(iaf,0,0)
 
 bandaIAF.SetNoDataValue(noValue)
 
-#numpy.seterr(all='warn')
-
 bandaIAF = None
 saidaIAF = None
 
 mask = None
 savi = None
+
+print 'IAF - Pronto'
 
 #----------
 
@@ -266,6 +268,8 @@ saidaAlbedoSuper = None
 maskAlbPlan = None
 albedoPlanetario = None
 
+print 'Albedo Superficie - Pronto'
+
 #----------
 
 ENB = 0.97 + 0.00331 * iaf
@@ -299,16 +303,12 @@ if saidaTempSuper is None:
 saidaTempSuper.SetProjection(projecao)
 bandaTempSuper = saidaTempSuper.GetRasterBand(1)
 
-#numpy.seterr(all='ignore')
-
 mask = numpy.logical_and(ENB != noValue, maskB6)
 
 temperaturaSuperficie = numpy.choose(mask, (noValue, K2 / numpy.log(((ENB * K1) / radianciaB6) + 1)))
 bandaTempSuper.WriteArray(temperaturaSuperficie,0,0)
 
 bandaTempSuper.SetNoDataValue(noValue)
-
-#numpy.seterr(all='warn')
 
 bandaTempSuper = None
 saidaTempSuper = None
@@ -317,6 +317,12 @@ maskB6 = None
 mask = None
 radianciaB6 = None
 ENB = None
+
+print 'Temperatura Superficie - Pronto'
+
+#----------
+
+numpy.seterr(all='warn')
 
 #----------
 
@@ -344,6 +350,8 @@ saidaSaldoRad = None
 
 E0 = None
 radOndaLongaEmi = None
+
+print 'Saldo Radiação - Pronto'
 
 #----------
 
@@ -375,6 +383,8 @@ saidaFluxoCalSolo = None
 
 mask = None
 ndvi = None
+
+print 'Fluxo Calor no Solo - Pronto'
 
 #----------
 
@@ -446,6 +456,8 @@ mask = None
 albedoSuperficie = None
 temperaturaSuperficie = None
 
+print 'Fração Evaporativa - Pronto'
+
 #----------
 
 saidaFluxCalSensi = driver.Create(pastaSaida+'fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float64)
@@ -468,6 +480,8 @@ bandaFluxCalSensi = None
 saidaFluxCalSensi = None
 
 fluxoCalorSensivel = None
+
+print 'Fluxo Calor Sensivel - Pronto'
 
 #----------
 
@@ -493,6 +507,8 @@ fluxoCalorLatente = None
 saldoRadiacao = None
 fluxoCalSolo = None
 fracaoEvaporativa = None
+
+print 'Fluxo Calor Latente - Pronto'
 
 #----------
 
