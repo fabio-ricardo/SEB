@@ -163,8 +163,11 @@ AlPlan = None
 #indice de Vegetacao da Diferenca Normalizada
 mask =  (abs(P4) + abs(P3))  < 999.9
 NDVI = numpy.choose(mask, (-999.9, (P4 - P3) / (P4+ P3)))	
-EscreveResult(NDVI,'NDVI.tif')
-	
+EscreveResult(NDVI*100,'NDVI.tif')
+for i in range(0,colunas):
+	if NDVI[4000,i] <> -999.9*100:
+		print NDVI[4000,i]
+
 #indice de Vegetacao Ajustado para os Efeitos do Solo
 SAVI = numpy.choose(mask, (-999.9, ((1+0.5)*(P4-P3))/(0.5+P4+P3)))
 P4 = None
@@ -231,8 +234,7 @@ NDVIHot3 = nanmax(NDVI[mask])
 NDVICold1 = nanmin(NDVI[mask])
 NDVICold2 = nanmin(NDVI[mask])
 NDVICold3 = nanmin(NDVI[mask])
-l1 =[]
-l2 =[]
+
 for i in xrange(0,linhas):
 	for j in xrange(0,colunas):
 		if NDVI[i,j] <> None and NDVI[i,j] <> -999.9 and (T[i,j] <> -999.9):
@@ -245,7 +247,6 @@ for i in xrange(0,linhas):
 				
 				THot1 = T[i,j]
 				NDVIHot1 = NDVI[i,j]
-				l1.append(NDVI[i,j])
 				NDVI[i,j] = None
 			
 			if NDVI[i,j] <> None and NDVI[i,j] >= NDVICold1	and T[i,j] <= TCold1:
@@ -257,24 +258,14 @@ for i in xrange(0,linhas):
 				
 				TCold1 = T[i,j]
 				NDVICold1 = NDVI[i,j]
-				l2.append(NDVI[i,j])
 				NDVI[i,j] = None
 
-print THot1
-print THot2
-print THot3
-print l1[-3], l1[-2], l1[-1]
-
-print TCold1
-print TCold2
-print TCold3
-print l2[-3], l2[-2], l2[-1]
 numpy.seterr(all='warn')
-'''TH = (THot1 + THot2 + THot3)/3
+TH = (THot1 + THot2 + THot3)/3
 TC = (TCold1 + TCold2 + TCold3)/3
 NDVI = None
 
-
+'''
 #Fracao de evapotranspiracao
 ETf = (TH - T)/(TH - TC)
 EscreveResult(ETf,'FracaoEvapotranspiracao.tif')
