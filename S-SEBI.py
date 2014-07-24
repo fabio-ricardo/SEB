@@ -25,7 +25,6 @@ print 'linhas:',linhas,' colunas:',colunas,'bandas:',NBandas,'driver:',driverEnt
 
 #----------
 
-noValue = -9999.0
 pi = math.pi
 cosZ = math.cos((90 - 56.98100422)*pi/180) # pego do metadata da imagem - SUN_ELEVATION
 dr = 1+0.033*math.cos((272*2*pi)/365) # 29 de setembro de 2011
@@ -42,7 +41,6 @@ radOndaCurtaInci = S * cosZ * dr * tsw
 Ea = 0.85 * math.pow(-1 * math.log(tsw),0.09)
 Ta = 295
 radOndaLongaInci = Ea * constSB * math.pow(Ta,4)
-G = 0.5
 qtdPontos = 20
 x1 = 0.1
 x2 = 0.9
@@ -71,13 +69,10 @@ except:
 #----------
 
 dados = entrada.GetRasterBand(1).ReadAsArray().astype(numpy.float64)
-
 radiancia = descBandas[1][3] + (descBandas[1][6] * dados)
 reflectancia = p1[1] * radiancia
 
 albedoPlanetario = descBandas[1][7] * reflectancia
-
-maskAlbPlan = dados > 0
 
 dados = None
 radiancia = None
@@ -86,13 +81,10 @@ reflectancia = None
 #----------
 
 dados = entrada.GetRasterBand(2).ReadAsArray().astype(numpy.float64)
-
 radiancia = descBandas[2][3] + (descBandas[2][6] * dados)
 reflectancia = p1[2] * radiancia
 
 albedoPlanetario += descBandas[2][7] * reflectancia
-
-maskAlbPlan = numpy.logical_and(maskAlbPlan, dados > 0)
 
 dados = None
 radiancia = None
@@ -100,10 +92,11 @@ reflectancia = None
 
 #----------
 
-dados3 = entrada.GetRasterBand(3).ReadAsArray().astype(numpy.float64)
+dados = entrada.GetRasterBand(3).ReadAsArray().astype(numpy.float64)
+radiancia = descBandas[3][3] + (descBandas[3][6] * dados)
+reflectanciaB3 = p1[3] * radiancia
 
-radiancia = descBandas[3][3] + (descBandas[3][6] * dados3)
-reflectancia = p1[3] * radiancia
+albedoPlanetario += descBandas[3][7] * reflectanciaB3
 
 albedoPlanetario += descBandas[3][7] * reflectancia
 
