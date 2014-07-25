@@ -396,10 +396,10 @@ print 'Fluxo Calor no Solo - Pronto'
 
 albedoSupMax = numpy.amax(albedoSuperficie)
 
-maskAlbedoSuper = numpy.logical_and(albedoSuperficie <= 0.2, albedoSuperficie != noValue)
+maskAlbedoSuper = numpy.logical_and(albedoSuperficie <= (albedoSupMax * 0.8), albedoSuperficie != noValue)
 limiteLadoEsq = temperaturaSuperficie[maskAlbedoSuper]
 
-maskAlbedoSuper = albedoSuperficie >= (albedoSupMax * 0.8)
+maskAlbedoSuper = albedoSuperficie >= (albedoSupMax - (albedoSupMax * 0.8))
 limiteLadoDir = temperaturaSuperficie[maskAlbedoSuper]
 
 maskAlbedoSuper = None
