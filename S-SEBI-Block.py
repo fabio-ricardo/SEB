@@ -33,6 +33,7 @@ ap = 0.03
 z = 200
 tsw = 0.75 + 2*0.00001 * z
 p2 = 1 / (tsw * tsw)
+albedoSupMax = 0
 L = 0.5
 K1 = 607.76
 K2 = 1260.56
@@ -215,8 +216,14 @@ for i in range(0,linhas,yBlockSize):
         #----------
 
         albedoSuperficie = numpy.choose(maskAlbPlan, (noValue, (albedoPlanetario - ap) * p2))
+
+        mask = numpy.logical_and(albedoSuperficie < 0, albedoSuperficie != noValue)
+
+        albedoSuperficie = numpy.choose(mask, (albedoSuperficie, 0.0))
+
         bandaAlbedoSuper.WriteArray(albedoSuperficie,j,i)
 
+        mask = None
         maskAlbPlan = None
         albedoPlanetario = None
 
@@ -291,10 +298,63 @@ for i in range(0,linhas,yBlockSize):
 
         #----------
 
-        maskAlbedoSuper = numpy.logical_and(albedoSuperficie <= 0.2, albedoSuperficie != noValue)
+        if numpy.amax(albedoSuperficie) > albedoSupMax:
+            albedoSupMax = numpy.amax(albedoSuperficie)
+
+        #----------
+
+#----------
+
+numpy.seterr(all='warn')
+
+#----------
+
+bandaEntrada = None
+entrada = None
+
+bandaNDVI.SetNoDataValue(noValue)
+bandaNDVI = None
+saidaNDVI = None
+
+print 'NDVI - Pronto'
+
+bandaSAVI.SetNoDataValue(noValue)
+bandaSAVI = None
+saidaSAVI = None
+
+print 'SAVI - Pronto'
+
+bandaIAF.SetNoDataValue(noValue)
+bandaIAF = None
+saidaIAF = None
+
+print 'IAF - Pronto'
+
+#----------
+
+for i in range(0,linhas,yBlockSize):
+    if i + yBlockSize < linhas:
+        lerLinhas = yBlockSize
+    else:
+        lerLinhas = linhas - i
+
+    for j in range(0,colunas,xBlockSize):
+        if j + xBlockSize < colunas:
+            lerColunas = xBlockSize
+        else:
+            lerColunas = colunas - j
+
+        #----------
+
+        albedoSuperficie = bandaAlbedoSuper.ReadAsArray(j,i,lerColunas,lerLinhas)
+        temperaturaSuperficie = bandaTempSuper.ReadAsArray(j,i,lerColunas,lerLinhas)
+
+        #----------
+
+        maskAlbedoSuper = numpy.logical_and(albedoSuperficie <= (albedoSupMax * 0.2), albedoSuperficie != noValue)
         limiteLadoEsq = temperaturaSuperficie[maskAlbedoSuper]
 
-        maskAlbedoSuper = albedoSuperficie >= 0.75
+        maskAlbedoSuper = albedoSuperficie >= (albedoSupMax * 0.8)
         limiteLadoDir = temperaturaSuperficie[maskAlbedoSuper]
 
         maskAlbedoSuper = None
@@ -333,33 +393,6 @@ for i in range(0,linhas,yBlockSize):
         limiteLadoDir = None
 
         #----------
-
-#----------
-
-numpy.seterr(all='warn')
-
-#----------
-
-bandaEntrada = None
-entrada = None
-
-bandaNDVI.SetNoDataValue(noValue)
-bandaNDVI = None
-saidaNDVI = None
-
-print 'NDVI - Pronto'
-
-bandaSAVI.SetNoDataValue(noValue)
-bandaSAVI = None
-saidaSAVI = None
-
-print 'SAVI - Pronto'
-
-bandaIAF.SetNoDataValue(noValue)
-bandaIAF = None
-saidaIAF = None
-
-print 'IAF - Pronto'
 
 #----------
 
@@ -461,6 +494,8 @@ for i in range(0,linhas,yBlockSize):
         fracaoEvaporativa = None
 
         #----------
+
+#----------
 
 bandaAlbedoSuper.SetNoDataValue(noValue)
 bandaAlbedoSuper = None
