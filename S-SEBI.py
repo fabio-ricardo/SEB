@@ -258,6 +258,11 @@ saidaAlbedoSuper.SetProjection(projecao)
 bandaAlbedoSuper = saidaAlbedoSuper.GetRasterBand(1)
 
 albedoSuperficie = numpy.choose(maskAlbPlan, (noValue, (albedoPlanetario - ap) * p2))
+
+mask = numpy.logical_and(albedoSuperficie < 0, albedoSuperficie != noValue)
+
+albedoSuperficie = numpy.choose(mask, (albedoSuperficie, 0.0))
+
 bandaAlbedoSuper.WriteArray(albedoSuperficie,0,0)
 
 bandaAlbedoSuper.SetNoDataValue(noValue)
@@ -265,6 +270,7 @@ bandaAlbedoSuper.SetNoDataValue(noValue)
 bandaAlbedoSuper = None
 saidaAlbedoSuper = None
 
+mask = None
 maskAlbPlan = None
 albedoPlanetario = None
 
@@ -388,10 +394,12 @@ print 'Fluxo Calor no Solo - Pronto'
 
 #----------
 
+albedoSupMax = numpy.amax(albedoSuperficie)
+
 maskAlbedoSuper = numpy.logical_and(albedoSuperficie <= 0.2, albedoSuperficie != noValue)
 limiteLadoEsq = temperaturaSuperficie[maskAlbedoSuper]
 
-maskAlbedoSuper = albedoSuperficie >= 0.75
+maskAlbedoSuper = albedoSuperficie >= (albedoSupMax * 0.8)
 limiteLadoDir = temperaturaSuperficie[maskAlbedoSuper]
 
 maskAlbedoSuper = None
