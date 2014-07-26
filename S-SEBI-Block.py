@@ -45,9 +45,6 @@ Ta = 295
 radOndaLongaInci = Ea * constSB * math.pow(Ta,4)
 G = 0.5
 qtdPontos = 20
-x1 = 0.1
-x2 = 0.9
-x2x1 = x2 - x1
 
 #----------
 
@@ -401,6 +398,10 @@ limInfEsq = numpy.sum(limInfEsq) / qtdPontos
 
 limSupDir = numpy.sum(limSupDir) / qtdPontos
 limInfDir = numpy.sum(limInfDir) / qtdPontos
+
+x1 = 0.1
+x2 = albedoSupMax
+x2x1 = x2 - x1
 
 m1 = (limSupDir - limSupEsq) / x2x1
 m2 = (limInfDir - limInfEsq) / x2x1
