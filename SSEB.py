@@ -43,10 +43,17 @@ Ea = 0.85 * math.pow(-1 * math.log(tsw),0.09)
 Ta = 295
 radOndaLongaInci = Ea * constSB * math.pow(Ta,4)
 G = 0.5
-qtdPontos = 20
-x1 = 0.1
-x2 = 0.9
-x2x1 = x2 - x1
+qtdPontos = 3
+
+u2 = 2.77
+UR = 50
+delta = (2504 * math.exp((17.27 * Ta) / (Ta + 237.3))) / ((Ta + 237.3) * (Ta + 237.3))
+l = 2.501 - 0.002361 * Ta
+P = 101.3 * math.pow((273.15 + Ta - 0.0065 * z) / (273.15 + Ta), 5.26)
+gama = 0.00163 * P / l
+es = 6.1078 * math.pow(10, (7.5 * Ta) / (237.3 + Ta))
+Td = 100 - ((100 - UR) / 5)
+ea = 6.1078 * math.pow(10, (7.5 * Td) / (237.3 + Td))
 
 p1 = numpy.empty([NBandas+1],dtype=numpy.float64)
 p1[0] = 0
@@ -60,7 +67,7 @@ for k in range(1,NBandas+1):
 
 #----------
 
-pastaSaida = 'S-SEBI__'+nomeArquivoEntrada+'/'
+pastaSaida = 'SSEB__'+nomeArquivoEntrada+'/'
 
 try:
     os.mkdir(pastaSaida)
@@ -69,7 +76,7 @@ except:
     print 'Recriando arquivos, se existir.'
 
 #----------
-numpy.seterr(all='ignore')
+
 dados = entrada.GetRasterBand(1).ReadAsArray().astype(numpy.float64)
 
 radiancia = descBandas[1][3] + (descBandas[1][6] * dados)
@@ -128,6 +135,10 @@ reflectancia = None
 
 #----------
 
+numpy.seterr(all='ignore')
+
+#----------
+
 saidaNDVI = driver.Create(pastaSaida+'ndvi.tif',colunas,linhas,1,GDT_Float64)
 if saidaNDVI is None:
     print 'Erro ao criar o arquivo: ' + 'ndvi.tif'
@@ -136,8 +147,6 @@ if saidaNDVI is None:
 saidaNDVI.SetProjection(projecao)
 bandaNDVI = saidaNDVI.GetRasterBand(1)
 
-#numpy.seterr(all='ignore')
-
 mask = numpy.logical_and(dados3 > 0, dados4 > 0)
 
 ndvi = numpy.choose(mask, (noValue, (dados4 - dados3) / (dados4 + dados3)))
@@ -145,10 +154,10 @@ bandaNDVI.WriteArray(ndvi,0,0)
 
 bandaNDVI.SetNoDataValue(noValue)
 
-#numpy.seterr(all='warn')
-
 bandaNDVI = None
 saidaNDVI = None
+
+print 'NDVI - Pronto'
 
 #----------
 
@@ -173,6 +182,8 @@ mask = None
 dados4 = None
 dados3 = None
 
+print 'SAVI - Pronto'
+
 #----------
 
 saidaIAF = driver.Create(pastaSaida+'iaf.tif',colunas,linhas,1,GDT_Float64)
@@ -183,8 +194,6 @@ if saidaIAF is None:
 saidaIAF.SetProjection(projecao)
 bandaIAF = saidaIAF.GetRasterBand(1)
 
-#numpy.seterr(all='ignore')
-
 mask = numpy.logical_and(((0.69 - savi) / 0.59) > 0, savi != noValue)
 
 iaf = numpy.choose(mask, (noValue, -1 * (numpy.log((0.69 - savi) / 0.59) / 0.91)))
@@ -193,13 +202,13 @@ bandaIAF.WriteArray(iaf,0,0)
 
 bandaIAF.SetNoDataValue(noValue)
 
-#numpy.seterr(all='warn')
-
 bandaIAF = None
 saidaIAF = None
 
 mask = None
 savi = None
+
+print 'IAF - Pronto'
 
 #----------
 
@@ -256,6 +265,11 @@ saidaAlbedoSuper.SetProjection(projecao)
 bandaAlbedoSuper = saidaAlbedoSuper.GetRasterBand(1)
 
 albedoSuperficie = numpy.choose(maskAlbPlan, (noValue, (albedoPlanetario - ap) * p2))
+
+mask = numpy.logical_and(albedoSuperficie < 0, albedoSuperficie != noValue)
+
+albedoSuperficie = numpy.choose(mask, (albedoSuperficie, 0.0))
+
 bandaAlbedoSuper.WriteArray(albedoSuperficie,0,0)
 
 bandaAlbedoSuper.SetNoDataValue(noValue)
@@ -263,8 +277,11 @@ bandaAlbedoSuper.SetNoDataValue(noValue)
 bandaAlbedoSuper = None
 saidaAlbedoSuper = None
 
+mask = None
 maskAlbPlan = None
 albedoPlanetario = None
+
+print 'Albedo Superficie - Pronto'
 
 #----------
 
@@ -299,16 +316,12 @@ if saidaTempSuper is None:
 saidaTempSuper.SetProjection(projecao)
 bandaTempSuper = saidaTempSuper.GetRasterBand(1)
 
-#numpy.seterr(all='ignore')
-
 mask = numpy.logical_and(ENB != noValue, maskB6)
 
 temperaturaSuperficie = numpy.choose(mask, (noValue, K2 / numpy.log(((ENB * K1) / radianciaB6) + 1)))
 bandaTempSuper.WriteArray(temperaturaSuperficie,0,0)
 
 bandaTempSuper.SetNoDataValue(noValue)
-
-#numpy.seterr(all='warn')
 
 bandaTempSuper = None
 saidaTempSuper = None
@@ -317,6 +330,12 @@ maskB6 = None
 mask = None
 radianciaB6 = None
 ENB = None
+
+print 'Temperatura Superficie - Pronto'
+
+#----------
+
+numpy.seterr(all='warn')
 
 #----------
 
@@ -345,6 +364,8 @@ saidaSaldoRad = None
 E0 = None
 radOndaLongaEmi = None
 
+print 'Saldo Radiação - Pronto'
+
 #----------
 
 saidaFluxoCalSolo = driver.Create(pastaSaida+'fluxoCalorSolo.tif',colunas,linhas,1,GDT_Float64)
@@ -369,58 +390,168 @@ fluxoCalSolo = numpy.choose(mask, (noValue, fluxoCalSolo))
 bandaFluxoCalSolo.WriteArray(fluxoCalSolo,0,0)
 
 bandaFluxoCalSolo.SetNoDataValue(noValue)
-########
 
-#Encontrando 3 pixels ancoras quentes e frios
-ndviAlto = []
-ndviBaixo = []
-ndvi = ndvi[ndvi != noValue]
-ndvi = ndvi.flatten()
-for i in range(0,50):
-	ndviAlto.append(numpy.nanmax(ndvi))
-	ndvi[numpy.nanargmax(ndvi[mask])] = None
-	
-	ndviBaixo.append(numpy.nanmin(ndvi))
-	ndvi[numpy.nanargmin(ndvi[mask])] = None
+bandaFluxoCalSolo = None
+saidaFluxoCalSolo = None
+
+mask = None
+albedoSuperficie = None
+
+print 'Fluxo Calor no Solo - Pronto'
+
+#----------
+
+hotTemp = numpy.array([],dtype=numpy.float64)
+coldNdvi = numpy.array([],dtype=numpy.float64)
+
+coldTemp = numpy.array([],dtype=numpy.float64)
+hotNdvi = numpy.array([],dtype=numpy.float64)
+
+tempSuperficie = numpy.copy(temperaturaSuperficie)
+
+tempSuperficie.reshape(-1)
+ndvi.reshape(-1)
+
+mask = numpy.logical_and(tempSuperficie != noValue, ndvi != noValue)
+
+tempSuperficie = tempSuperficie[mask]
+ndvi = ndvi[mask]
+
+mask = None
+
+for i in range(qtdPontos):
+    if hotTemp.size < qtdPontos:
+        ndviTempIgual = numpy.array([])
+
+        hotTemp = numpy.append(hotTemp,tempSuperficie[numpy.nanargmax(tempSuperficie)])
+        ndviTempIgual = numpy.append(ndviTempIgual,ndvi[numpy.nanargmax(tempSuperficie)])
+        tempSuperficie[numpy.nanargmax(tempSuperficie)] = numpy.nan
+
+        prox = numpy.nanargmax(tempSuperficie)
+        posUlt = hotTemp.size-1
+
+        while hotTemp[posUlt] == tempSuperficie[prox]:
+            ndviTempIgual = numpy.append(ndviTempIgual,ndvi[prox])
+
+            tempSuperficie[prox] = numpy.nan
+            prox = numpy.nanargmax(tempSuperficie)
+
+        if ndviTempIgual.size > 1:
+            ndviTempIgual = numpy.sort(ndviTempIgual)
+
+            tamNdviTeIg = ndviTempIgual.size
+            if tamNdviTeIg > (qtdPontos - posUlt):
+                tamNdviTeIg = qtdPontos - posUlt
+
+            coldNdvi = numpy.append(coldNdvi,ndviTempIgual[:tamNdviTeIg])
+
+            for j in range(tamNdviTeIg-1):
+                hotTemp = numpy.append(hotTemp,hotTemp[posUlt])
+
+        else:
+            coldNdvi = numpy.append(coldNdvi,ndviTempIgual[0])
+
+        ndviTempIgual = None
+
+    if coldTemp.size < qtdPontos:
+        ndviTempIgual = numpy.array([])
+
+        coldTemp = numpy.append(coldTemp,tempSuperficie[numpy.nanargmin(tempSuperficie)])
+        ndviTempIgual = numpy.append(ndviTempIgual,ndvi[numpy.nanargmin(tempSuperficie)])
+        tempSuperficie[numpy.nanargmin(tempSuperficie)] = numpy.nan
+
+        prox = numpy.nanargmin(tempSuperficie)
+        posUlt = coldTemp.size-1
+
+        while coldTemp[posUlt] == tempSuperficie[prox]:
+            ndviTempIgual = numpy.append(ndviTempIgual,ndvi[prox])
+
+            tempSuperficie[prox] = numpy.nan
+            prox = numpy.nanargmin(tempSuperficie)
+
+        if ndviTempIgual.size > 1:
+            ndviTempIgual = numpy.sort(ndviTempIgual)[::-1]
+
+            tamNdviTeIg = ndviTempIgual.size
+            if tamNdviTeIg > (qtdPontos - posUlt):
+                tamNdviTeIg = qtdPontos - posUlt
+
+            hotNdvi = numpy.append(hotNdvi,ndviTempIgual[:tamNdviTeIg])
+
+            for j in range(tamNdviTeIg-1):
+                coldTemp = numpy.append(coldTemp,coldTemp[posUlt])
+
+        else:
+            hotNdvi = numpy.append(hotNdvi,ndviTempIgual[0])
+
+        ndviTempIgual = None
+
 ndvi = None
-print ndviAlto
-print '--------------------------'
-print ndviBaixo	
-numpy.seterr(all='warn')
-'''
-#Fracao de evapotranspiracao
-ETf = (TH - T)/(TH - TC)
-EscreveResult(ETf,'FracaoEvapotranspiracao.tif')
-T = None
+tempSuperficie = None
 
-#Slope Vapour Pressure Curve 
-delta = (2504 * numpy.exp((17.27* Ta)/(Ta + 237.3)))/((Ta + 237.3)*(Ta + 237.3))
+#----------
 
-#Calor latente de vaporizacao
-l = 2.501 - (0.002361)*Ta
+TH = numpy.mean(hotTemp)
+TC = numpy.mean(coldTemp)
 
+#----------
 
-#Pressao atmosferica
-P = 101.3* math.pow((273.15 + Ta - 0.0065*z)/(273.15 + Ta), 5.26)
+saidaFracEvapo = driver.Create(pastaSaida+'fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float64)
+if saidaFracEvapo is None:
+    print 'Erro ao criar o arquivo: ' + 'fracaoEvaporativa.tif'
+    sys.exit(1)
 
-#Psychrometric constant
-gama = 0.00163*P/l
+saidaFracEvapo.SetProjection(projecao)
+bandaFracEvapo = saidaFracEvapo.GetRasterBand(1)
 
-#Pressao saturada e atual do vapor
-es = 6.1078 * math.pow(10,(7.5*Ta)/(237.3 + Ta))
-Td = 100 - ((100- UR)/5)
-ea = 6.1078 * math.pow(10,(7.5*Td)/(237.3 + Td))
+mask = temperaturaSuperficie != noValue
 
-#Evapotranspiracao atual
-mask = numpy.logical_and(fluxoCalSolo != noValue, saldoRadiacao != noValue )
-ET0 = numpy.choose(mask, (noValue, (0.408 * delta * (saldoRadiacao - fluxoCalSolo) + gama * (900/(Ta + 273.15))*u2*(es - ea)) /(delta + gama*(1 + 0.34*u2))))
-mask = ET0 != noValue
-ETa = numpy.choose(mask,(noValue, ETf * ET0))
-EscreveResult(ETa,'EvapotranspiracaoAtual.tif')
-ET0 = None
-ETf = None
-ETa = None'''
+fracaoEvaporativa = numpy.choose(mask, (noValue, (TH - temperaturaSuperficie) / (TH - TC)))
+
+bandaFracEvapo.WriteArray(fracaoEvaporativa,0,0)
+
+bandaFracEvapo.SetNoDataValue(noValue)
+
+bandaFracEvapo = None
+saidaFracEvapo = None
+
+mask = None
+temperaturaSuperficie = None
+
+print 'Fração Evaporativa - Pronto'
+
+#----------
+
+saidaEvapotransAtual = driver.Create(pastaSaida+'evapotranspiracaoAtual.tif',colunas,linhas,1,GDT_Float64)
+if saidaEvapotransAtual is None:
+    print 'Erro ao criar o arquivo: ' + 'evapotranspiracaoAtual.tif'
+    sys.exit(1)
+
+saidaEvapotransAtual.SetProjection(projecao)
+bandaEvapotransAtual = saidaEvapotransAtual.GetRasterBand(1)
+
+mask = fluxoCalSolo != noValue
+
+evapotranspiracaoAtual = numpy.choose(mask, (noValue, ((0.408 * delta * (saldoRadiacao - fluxoCalSolo)\
+    + gama * (900 / (Ta + 273.15)) * u2 * (es - ea)) / (delta + gama * (1 + 0.34 * u2))) * fracaoEvaporativa))
+
+bandaEvapotransAtual.WriteArray(evapotranspiracaoAtual,0,0)
+
+bandaEvapotransAtual.SetNoDataValue(noValue)
+
+bandaEvapotransAtual = None
+saidaEvapotransAtual = None
+
+mask = None
+evapotranspiracaoAtual = None
+saldoRadiacao = None
+fluxoCalSolo = None
+fracaoEvaporativa = None
+
+print 'Evapotranspiracao Atual - Pronto'
+
+#----------
 
 fim = time.time()
-print 'Tempo total: '+str(fim - inicio)
 
+print 'Tempo total: '+str(fim - inicio)+' segundos.'
