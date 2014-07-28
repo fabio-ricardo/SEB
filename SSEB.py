@@ -533,7 +533,7 @@ bandaEvapotransAtual = saidaEvapotransAtual.GetRasterBand(1)
 mask = fluxoCalSolo != noValue
 
 evapotranspiracaoAtual = numpy.choose(mask, (noValue, ((0.408 * delta * (saldoRadiacao - fluxoCalSolo)\
-    + gama * (900 / (Ta + 273.15)) * u2 * (es - ea)) / (delta + gama * (1 + 0.34 * u2))) * fracaoEvaporativa))
+    + gama * (900 / Ta) * u2 * (es - ea)) / (delta + gama * (1 + 0.34 * u2))) * fracaoEvaporativa))
 
 bandaEvapotransAtual.WriteArray(evapotranspiracaoAtual,0,0)
 
