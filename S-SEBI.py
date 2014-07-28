@@ -423,11 +423,11 @@ limiteLadoDir = None
 
 #----------
 
-limSupEsq = numpy.sum(limSupEsq) / qtdPontos
-limInfEsq = numpy.sum(limInfEsq) / qtdPontos
+limSupEsq = numpy.mean(limSupEsq)
+limInfEsq = numpy.mean(limInfEsq)
 
-limSupDir = numpy.sum(limSupDir) / qtdPontos
-limInfDir = numpy.sum(limInfDir) / qtdPontos
+limSupDir = numpy.mean(limSupDir)
+limInfDir = numpy.mean(limInfDir)
 
 x1 = 0.1
 x2 = albedoSupMax
