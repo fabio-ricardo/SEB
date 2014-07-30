@@ -58,43 +58,43 @@ except:
 
 #----------
 
-saidaNDVI = driver.Create(pastaSaida+'ndvi.tif',colunas,linhas,1,GDT_Float64)
+saidaNDVI = driver.Create(pastaSaida+'ndvi.tif',colunas,linhas,1,GDT_Float32)
 if saidaNDVI is None:
     print 'Erro ao criar o arquivo: ' + 'ndvi.tif'
     sys.exit(1)
 saidaNDVI.SetProjection(projecao)
 
-saidaSAVI = driver.Create(pastaSaida+'savi.tif',colunas,linhas,1,GDT_Float64)
+saidaSAVI = driver.Create(pastaSaida+'savi.tif',colunas,linhas,1,GDT_Float32)
 if saidaSAVI is None:
     print 'Erro ao criar o arquivo: ' + 'savi.tif'
     sys.exit(1)
 saidaSAVI.SetProjection(projecao)
 
-saidaIAF = driver.Create(pastaSaida+'iaf.tif',colunas,linhas,1,GDT_Float64)
+saidaIAF = driver.Create(pastaSaida+'iaf.tif',colunas,linhas,1,GDT_Float32)
 if saidaIAF is None:
     print 'Erro ao criar o arquivo: ' + 'iaf.tif'
     sys.exit(1)
 saidaIAF.SetProjection(projecao)
 
-saidaAlbedoSuper = driver.Create(pastaSaida+'albedoSuperficie.tif',colunas,linhas,1,GDT_Float64)
+saidaAlbedoSuper = driver.Create(pastaSaida+'albedoSuperficie.tif',colunas,linhas,1,GDT_Float32)
 if saidaAlbedoSuper is None:
     print 'Erro ao criar o arquivo: ' + 'albedoSuperficie.tif'
     sys.exit(1)
 saidaAlbedoSuper.SetProjection(projecao)
 
-saidaTempSuper = driver.Create(pastaSaida+'temperaturaSuperficie.tif',colunas,linhas,1,GDT_Float64)
+saidaTempSuper = driver.Create(pastaSaida+'temperaturaSuperficie.tif',colunas,linhas,1,GDT_Float32)
 if saidaTempSuper is None:
     print 'Erro ao criar o arquivo: ' + 'temperaturaSuperficie.tif'
     sys.exit(1)
 saidaTempSuper.SetProjection(projecao)
 
-saidaSaldoRad = driver.Create(pastaSaida+'saldoRadiacao.tif',colunas,linhas,1,GDT_Float64)
+saidaSaldoRad = driver.Create(pastaSaida+'saldoRadiacao.tif',colunas,linhas,1,GDT_Float32)
 if saidaSaldoRad is None:
     print 'Erro ao criar o arquivo: ' + 'saldoRadiacao.tif'
     sys.exit(1)
 saidaSaldoRad.SetProjection(projecao)
 
-saidaFluxoCalSolo = driver.Create(pastaSaida+'fluxoCalorSolo.tif',colunas,linhas,1,GDT_Float64)
+saidaFluxoCalSolo = driver.Create(pastaSaida+'fluxoCalorSolo.tif',colunas,linhas,1,GDT_Float32)
 if saidaFluxoCalSolo is None:
     print 'Erro ao criar o arquivo: ' + 'fluxoCalorSolo.tif'
     sys.exit(1)
@@ -104,16 +104,16 @@ saidaFluxoCalSolo.SetProjection(projecao)
 
 bandaEntrada = numpy.empty([NBandas+1],dtype=osgeo.gdal.Band)
 bandaEntrada[0] = 0
-p1 = numpy.empty([NBandas+1],dtype=numpy.float64)
+p1 = numpy.empty([NBandas+1],dtype=numpy.float32)
 p1[0] = 0
 p1[6] = 0
 
-limSupEsq = numpy.zeros([qtdPontos],dtype=numpy.float64)
-limInfEsq = numpy.zeros([qtdPontos],dtype=numpy.float64)
+limSupEsq = numpy.zeros([qtdPontos],dtype=numpy.float32)
+limInfEsq = numpy.zeros([qtdPontos],dtype=numpy.float32)
 limEsqPVez = True
 
-limSupDir = numpy.zeros([qtdPontos],dtype=numpy.float64)
-limInfDir = numpy.zeros([qtdPontos],dtype=numpy.float64)
+limSupDir = numpy.zeros([qtdPontos],dtype=numpy.float32)
+limInfDir = numpy.zeros([qtdPontos],dtype=numpy.float32)
 limDirPVez = True
 
 # ----------
@@ -155,14 +155,14 @@ for i in range(0,linhas,yBlockSize):
 
         #----------
 
-        dados = numpy.empty([NBandas+1,lerLinhas,lerColunas],dtype=numpy.float64)
+        dados = numpy.empty([NBandas+1,lerLinhas,lerColunas],dtype=numpy.float32)
         dados[0] = 0
 
         albedoPlanetario = 0
         maskAlbPlan = 1
 
         for k in range(1,NBandas+1):
-            dados[k] = bandaEntrada[k].ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float64)
+            dados[k] = bandaEntrada[k].ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
 
             if (k == 6):
                 radianciaB6 = descBandas[k][3] + (descBandas[k][6] * dados[k])
@@ -411,19 +411,19 @@ c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1
 
 #----------
 
-saidaFracEvapo = driver.Create(pastaSaida+'fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float64)
+saidaFracEvapo = driver.Create(pastaSaida+'fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float32)
 if saidaFracEvapo is None:
     print 'Erro ao criar o arquivo: ' + 'fracaoEvaporativa.tif'
     sys.exit(1)
 saidaFracEvapo.SetProjection(projecao)
 
-saidaFluxCalSensi = driver.Create(pastaSaida+'fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float64)
+saidaFluxCalSensi = driver.Create(pastaSaida+'fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float32)
 if saidaFluxCalSensi is None:
     print 'Erro ao criar o arquivo: ' + 'fluxoCalorSensivel.tif'
     sys.exit(1)
 saidaFluxCalSensi.SetProjection(projecao)
 
-saidaFluxCalLaten = driver.Create(pastaSaida+'fluxoCalorLatente.tif',colunas,linhas,1,GDT_Float64)
+saidaFluxCalLaten = driver.Create(pastaSaida+'fluxoCalorLatente.tif',colunas,linhas,1,GDT_Float32)
 if saidaFluxCalLaten is None:
     print 'Erro ao criar o arquivo: ' + 'fluxoCalorLatente.tif'
     sys.exit(1)

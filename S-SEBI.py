@@ -45,7 +45,7 @@ radOndaLongaInci = Ea * constSB * math.pow(Ta,4)
 G = 0.5
 qtdPontos = 20
 
-p1 = numpy.empty([NBandas+1],dtype=numpy.float64)
+p1 = numpy.empty([NBandas+1],dtype=numpy.float32)
 p1[0] = 0
 p1[6] = 0
 
@@ -67,7 +67,7 @@ except:
 
 #----------
 
-dados = entrada.GetRasterBand(1).ReadAsArray().astype(numpy.float64)
+dados = entrada.GetRasterBand(1).ReadAsArray().astype(numpy.float32)
 
 radiancia = descBandas[1][3] + (descBandas[1][6] * dados)
 reflectancia = p1[1] * radiancia
@@ -82,7 +82,7 @@ reflectancia = None
 
 #----------
 
-dados = entrada.GetRasterBand(2).ReadAsArray().astype(numpy.float64)
+dados = entrada.GetRasterBand(2).ReadAsArray().astype(numpy.float32)
 
 radiancia = descBandas[2][3] + (descBandas[2][6] * dados)
 reflectancia = p1[2] * radiancia
@@ -97,7 +97,7 @@ reflectancia = None
 
 #----------
 
-dados3 = entrada.GetRasterBand(3).ReadAsArray().astype(numpy.float64)
+dados3 = entrada.GetRasterBand(3).ReadAsArray().astype(numpy.float32)
 
 radiancia = descBandas[3][3] + (descBandas[3][6] * dados3)
 reflectancia = p1[3] * radiancia
@@ -111,7 +111,7 @@ reflectancia = None
 
 #----------
 
-dados4 = entrada.GetRasterBand(4).ReadAsArray().astype(numpy.float64)
+dados4 = entrada.GetRasterBand(4).ReadAsArray().astype(numpy.float32)
 
 radiancia = descBandas[4][3] + (descBandas[4][6] * dados4)
 reflectancia = p1[4] * radiancia
@@ -129,7 +129,7 @@ numpy.seterr(all='ignore')
 
 #----------
 
-saidaNDVI = driver.Create(pastaSaida+'ndvi.tif',colunas,linhas,1,GDT_Float64)
+saidaNDVI = driver.Create(pastaSaida+'ndvi.tif',colunas,linhas,1,GDT_Float32)
 if saidaNDVI is None:
     print 'Erro ao criar o arquivo: ' + 'ndvi.tif'
     sys.exit(1)
@@ -151,7 +151,7 @@ print 'NDVI - Pronto'
 
 #----------
 
-saidaSAVI = driver.Create(pastaSaida+'savi.tif',colunas,linhas,1,GDT_Float64)
+saidaSAVI = driver.Create(pastaSaida+'savi.tif',colunas,linhas,1,GDT_Float32)
 if saidaSAVI is None:
     print 'Erro ao criar o arquivo: ' + 'savi.tif'
     sys.exit(1)
@@ -176,7 +176,7 @@ print 'SAVI - Pronto'
 
 #----------
 
-saidaIAF = driver.Create(pastaSaida+'iaf.tif',colunas,linhas,1,GDT_Float64)
+saidaIAF = driver.Create(pastaSaida+'iaf.tif',colunas,linhas,1,GDT_Float32)
 if saidaIAF is None:
     print 'Erro ao criar o arquivo: ' + 'iaf.tif'
     sys.exit(1)
@@ -202,7 +202,7 @@ print 'IAF - Pronto'
 
 #----------
 
-dados = entrada.GetRasterBand(5).ReadAsArray().astype(numpy.float64)
+dados = entrada.GetRasterBand(5).ReadAsArray().astype(numpy.float32)
 
 radiancia = descBandas[5][3] + (descBandas[5][6] * dados)
 reflectancia = p1[5] * radiancia
@@ -217,7 +217,7 @@ reflectancia = None
 
 #----------
 
-dados = entrada.GetRasterBand(6).ReadAsArray().astype(numpy.float64)
+dados = entrada.GetRasterBand(6).ReadAsArray().astype(numpy.float32)
 
 radianciaB6 = descBandas[6][3] + (descBandas[6][6] * dados)
 
@@ -227,7 +227,7 @@ dados = None
 
 #----------
 
-dados = entrada.GetRasterBand(7).ReadAsArray().astype(numpy.float64)
+dados = entrada.GetRasterBand(7).ReadAsArray().astype(numpy.float32)
 
 radiancia = descBandas[7][3] + (descBandas[7][6] * dados)
 reflectancia = p1[7] * radiancia
@@ -246,7 +246,7 @@ entrada = None
 
 #----------
 
-saidaAlbedoSuper = driver.Create(pastaSaida+'albedoSuperficie.tif',colunas,linhas,1,GDT_Float64)
+saidaAlbedoSuper = driver.Create(pastaSaida+'albedoSuperficie.tif',colunas,linhas,1,GDT_Float32)
 if saidaAlbedoSuper is None:
     print 'Erro ao criar o arquivo: ' + 'albedoSuperficie.tif'
     sys.exit(1)
@@ -298,7 +298,7 @@ iaf = None
 
 #----------
 
-saidaTempSuper = driver.Create(pastaSaida+'temperaturaSuperficie.tif',colunas,linhas,1,GDT_Float64)
+saidaTempSuper = driver.Create(pastaSaida+'temperaturaSuperficie.tif',colunas,linhas,1,GDT_Float32)
 if saidaTempSuper is None:
     print 'Erro ao criar o arquivo: ' + 'temperaturaSuperficie.tif'
     sys.exit(1)
@@ -329,7 +329,7 @@ numpy.seterr(all='warn')
 
 #----------
 
-saidaSaldoRad = driver.Create(pastaSaida+'saldoRadiacao.tif',colunas,linhas,1,GDT_Float64)
+saidaSaldoRad = driver.Create(pastaSaida+'saldoRadiacao.tif',colunas,linhas,1,GDT_Float32)
 if saidaSaldoRad is None:
     print 'Erro ao criar o arquivo: ' + 'saldoRadiacao.tif'
     sys.exit(1)
@@ -358,7 +358,7 @@ print 'Saldo Radiação - Pronto'
 
 #----------
 
-saidaFluxoCalSolo = driver.Create(pastaSaida+'fluxoCalorSolo.tif',colunas,linhas,1,GDT_Float64)
+saidaFluxoCalSolo = driver.Create(pastaSaida+'fluxoCalorSolo.tif',colunas,linhas,1,GDT_Float32)
 if saidaFluxoCalSolo is None:
     print 'Erro ao criar o arquivo: ' + 'fluxoCalorSolo.tif'
     sys.exit(1)
@@ -441,7 +441,7 @@ c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1
 
 #----------
 
-saidaFracEvapo = driver.Create(pastaSaida+'fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float64)
+saidaFracEvapo = driver.Create(pastaSaida+'fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float32)
 if saidaFracEvapo is None:
     print 'Erro ao criar o arquivo: ' + 'fracaoEvaporativa.tif'
     sys.exit(1)
@@ -469,7 +469,7 @@ print 'Fração Evaporativa - Pronto'
 
 #----------
 
-saidaFluxCalSensi = driver.Create(pastaSaida+'fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float64)
+saidaFluxCalSensi = driver.Create(pastaSaida+'fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float32)
 if saidaFluxCalSensi is None:
     print 'Erro ao criar o arquivo: ' + 'fluxoCalorSensivel.tif'
     sys.exit(1)
@@ -494,7 +494,7 @@ print 'Fluxo Calor Sensivel - Pronto'
 
 #----------
 
-saidaFluxCalLaten = driver.Create(pastaSaida+'fluxoCalorLatente.tif',colunas,linhas,1,GDT_Float64)
+saidaFluxCalLaten = driver.Create(pastaSaida+'fluxoCalorLatente.tif',colunas,linhas,1,GDT_Float32)
 if saidaFluxCalLaten is None:
     print 'Erro ao criar o arquivo: ' + 'fluxoCalorLatente.tif'
     sys.exit(1)
