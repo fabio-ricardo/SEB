@@ -98,147 +98,172 @@ img = None
 print ('Parte 1')
 
 
-L3 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-P3 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-L4 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-P4 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-NDVI = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-SAVI = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-IAF =[[None for x in xrange(linhas)] for x in xrange(colunas)] 
-Enb = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-E0 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-AlPlan = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-
+L3 = [[] for x in xrange(colunas)] 
+P3 = [[] for x in xrange(colunas)] 
+L4 = [[] for x in xrange(colunas)] 
+P4 = [[] for x in xrange(colunas)] 
+NDVI = [[] for x in xrange(colunas)] 
+SAVI = [[] for x in xrange(colunas)] 
+AlPlan = [[] for x in xrange(colunas)] 
+IAF =[[] for x in xrange(colunas)] 
 
 
 for i in range(0,linhas):
 	for j in range(0,colunas):
-		if not(banda1[i,j] == banda2[i,j] == banda3[i,j] == banda4[i,j] == banda5[i,j] == banda6[i,j] == banda7[i,j]):		
-			L3[i,j] = a3 + ((b3 - a3)/255)* banda3[i,j]
-			P3[i,j] = (math.pi * L3[i,j])/(k3 * math.cos(angle)*d)
+		if not(banda1[i][j] == banda2[i][j] == banda3[i][j] == banda4[i][j] == banda5[i][j] == banda6[i][j] == banda7[i][j]):		
+			L3[i].append( a3 + ((b3 - a3)/255)* banda3[i][j])
+			P3[i].append( (math.pi * L3[i][j])/(k3 * math.cos(angle)*d))
 
-			L4[i,j] = a4 + ((b4 - a4)/255)* banda4[i,j]
-			P4[i,j] = (math.pi * L4[i,j])/(k4 * math.cos(angle)*d)	
+			L4[i].append( a4 + ((b4 - a4)/255)* banda4[i][j])
+			P4[i].append( (math.pi * L4[i][j])/(k4 * math.cos(angle)*d))	
 	
 			#indice de Vegetacao da Diferenca Normalizada
-			NDVI[i,j] = (P4[i,j] - P3[i,j]) / (P4[i,j]+ P3[i,j])
+			NDVI[i].append( (P4[i][j] - P3[i][j]) / (P4[i][j]+ P3[i][j]))
 
 			#indice de Vegetacao Ajustado para os Efeitos do Solo
-			SAVI[i,j] = ((1+0.5)*(P4[i,j]-P3[i,j]))/(0.5+P4[i,j]+P3[i,j])
-
+			SAVI[i].append( ((1+0.5)*(P4[i][j]-P3[i][j]))/(0.5+P4[i][j]+P3[i][j]))
+			AlPlan[i].append( 0,233*P3[i][j] + 0,157*P4[i][j])
+			
 			#Indice area foliar
-			IAF[i,j] = (math.log((0.69 - SAVI[i,j])/0.59))/0.91 * (-1)
-		
-			#Emissividade
-			if NDVI[i,j] >0 and IAF[i,j] <3:
-				Enb[i,j] = 0.97 + 0.00331* IAF[i,j]
-				E0[i,j] = 0.95 + 0.01 * IAF[i,j]
-			elif IAF >=3:
-				Enb[i,j] = 0.98
-				E0[i,j] = 0.98
-			elif NDVI <0:
-				Enb[i,j] = 0.99
-				E0[i,j] = 0.985  	
-	
-			AlPlan[i,j] = 0,233*P3[i,j] + 0,157*P4[i,j]
+			if (0.69 - SAVI[i][j])/0.59 > 0:
+				IAF[i].append((math.log((0.69 - SAVI[i][j])/0.59))/0.91 * (-1))
+			else:
+				IAF[i].append(None)
 L3 = None
 P3 = None
 L4 = None
-P4 = None
+P4 = None	
 EscreveResult(NDVI,'NDVI.tif')
 EscreveResult(SAVI,'SAVI.tif')
 EscreveResult(IAF,'IAF.tif')
-NDVI = None
 IAF = None
 SAVI = None
-E0 = None
-
-L1 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-P1 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-L2 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-P2 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-
-L6 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-L5 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-P5 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-T = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
+	
+Enb = [[] for x in xrange(colunas)] 
+E0 = [[] for x in xrange(colunas)] 
 
 for i in range(0,linhas):
 	for j in range(0,colunas):
-		if not(banda1[i,j] == banda2[i,j] == banda3[i,j] == banda4[i,j] == banda5[i,j] == banda6[i,j] == banda7[i,j]):		
-			L1[i,j] = a1 + ((b1 - a1)/255)* banda1[i,j]
-			P1[i,j] = (math.pi * L1[i,j])/(k1 * math.cos(angle)*d)
+		if not(banda1[i][j] == banda2[i][j] == banda3[i][j] == banda4[i][j] == banda5[i][j] == banda6[i][j] == banda7[i][j]):		
 
-			L2[i,j] = a2 + ((b2 - a2)/255)* banda2[i,j]
-			P2[i,j] = (math.pi * L2[i,j])/(k2 * math.cos(angle)*d)
+			#Emissividade
+			if IAF[i][j] != None:
+				if NDVI[i][j] >0 and IAF[i][j] <3:
+					Enb[i].append(0.97 + 0.00331* IAF[i][j])
+					E0[i].append( 0.95 + 0.01 * IAF[i][j])
+				elif IAF >=3:
+					Enb[i].append(0.98)
+					E0[i].append(0.98)
+				elif NDVI <0:
+					Enb[i].append(0.99)
+					E0[i].append(0.985)  	
+			else:
+				Enb[i].append(None)
+				E0[i].append(None)
 			
-			L5[i,j] = a5 + ((b5 - a5)/255)* banda5[i,j]
-			P5[i,j] = (math.pi * L5[i,j])/(k5 * math.cos(angle)*d)
-			
-			L6[i,j] = a6 + ((b6 - a6)/255)* banda6[i,j]
+
+
+
+
+L1 = [[] for x in xrange(colunas)] 
+P1 = [[] for x in xrange(colunas)] 
+L2 = [[] for x in xrange(colunas)] 
+P2 = [[] for x in xrange(colunas)] 
+L6 = [[] for x in xrange(colunas)] 
+T = [[] for x in xrange(colunas)] 
+
+for i in range(0,linhas):
+	for j in range(0,colunas):
+		if not(banda1[i][j] == banda2[i][j] == banda3[i][j] == banda4[i][j] == banda5[i][j] == banda6[i][j] == banda7[i][j]):		
+			L1[i].append(a1 + ((b1 - a1)/255)* banda1[i][j])
+			P1[i].append((math.pi * L1[i][j])/(k1 * math.cos(angle)*d))
+
+			L2[i].append(a2 + ((b2 - a2)/255)* banda2[i][j])
+			P2[i].append((math.pi * L2[i][j])/(k2 * math.cos(angle)*d))
+						
+			L6[i].append(a6 + ((b6 - a6)/255)* banda6[i][j])
 			
 			#Temperatura satelite (K)
-			T[i,j] = 1260.56/(math.log((Enb[i,j]*607.76/L6[i,j]) +1))
+			if Enb[i][j] != None and (Enb[i][j]*607.76/L6[i][j]) +1 >0 :
+				T[i].append(1260.56/(math.log((Enb[i][j]*607.76/L6[i][j]) +1)))
+			else:
+				T[i].append(None)
+			AlPlan[i][j] = AlPlan + 0,293*P1[i][j] + 0,274*P2[i][j] 
+
+	print i
 L1 = None
 P1 = None
 L2 = None
 P2 = None
-L5 = None
-P5 = None
 L6 = None
+Enb = None
 
-Frt_emit = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-AlSuper = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-Rn = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-G = [[None for x in xrange(linhas)] for x in xrange(colunas)] 	
-L7 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
-P7 = [[None for x in xrange(linhas)] for x in xrange(colunas)] 
+L5 = [[] for x in xrange(colunas)] 
+P5 = [[] for x in xrange(colunas)] 
+AlSuper = [[] for x in xrange(colunas)] 	
+L7 = [[] for x in xrange(colunas)] 
+P7 = [[] for x in xrange(colunas)] 
+
 for i in range(0,linhas):
 	for j in range(0,colunas):
-		if not(banda1[i,j] == banda2[i,j] == banda3[i,j] == banda4[i,j] == banda5[i,j] == banda6[i,j] == banda7[i,j]):				
-			AlPlan[i,j] = AlPlan + 0,293*P1[i,j] + 0,274*P2[i,j] + 0,033*P5[i,j] + 0,011*P7[i,j]
+		if not(banda1[i][j] == banda2[i][j] == banda3[i][j] == banda4[i][j] == banda5[i][j] == banda6[i][j] == banda7[i][j]):				
+						
+			L5[i].append(a5 + ((b5 - a5)/255)* banda5[i][j])
+			P5[i].append((math.pi * L5[i][j])/(k5 * math.cos(angle)*d))
 			
-			L7[i,j] = a7 + ((b7 - a7)/255)* banda7[i,j]
+			L7[i].append( a7 + ((b7 - a7)/255)* banda7[i][j])		
+			P7[i].append((math.pi * L7[i][j])/(k7 * math.cos(angle)*d))
 			
-			P7[i,j] = (math.pi * L7[i,j])/(k7 * math.cos(angle)*d)
+			AlPlan[i][j] = AlPlan + 0,033*P5[i][j] +  0,011*P7[i][j]
 			
 			#Albedo superficie(deve-se imprimir em porcentagem)
-			AlSuper[i,j] = (AlPlan[i,j] - 0.03)/(tsw*tsw)
-			
-			#Temperatura satelite (K)
-			T[i,j] = 1260.56/(math.log((Enb[i,j]*607.76/L6[i,j]) +1))
+			AlSuper[i].append((AlPlan[i][j] - 0.03)/(tsw*tsw))
 			
 			#Pegar o maior albedo p/ o limite
-			if AlSuper[i,j] > x2 :
-				x2 = AlSuper[i,j]
-
-			#fluxo radiacao termal emitida
-			Frt_emit[i,j]= E0[i,j]*0.0000000567*math.pow(T[i,j],4)
-
-			#Saldo da radiacao
-			Rn[i,j] = (1 - AlSuper[i,j])*Rs + Rol_atm - Frt_emit[i,j] - (1 - E0[i,j])*Rol_atm
-			
-			#Fluxo de calor no solo
-			G[i,j] = ((T[i,j] - 273.15)*(0.0038 + (0.0074*AlSuper))*(1-0.98*math.pow(NDVI[i,j],4)))*Rn[i,j]
+			if AlSuper[i][j] > x2 :
+				x2 = AlSuper[i][j]
 		else:
-			AlSuper = None
-print ('Parte 2')
-
+			AlSuper[i].append(None)
+L5 = None
+P5 = None				
 L7 = None
 P7 = None
 AlPlan = None
-Enb = None
 
-Frt_emit = None
+Rn = [[] for x in xrange(colunas)] 
+G = [[] for x in xrange(colunas)] 
+Frt_emit = [[] for x in xrange(colunas)] 
+
+for i in range(0,linhas):
+	for j in range(0,colunas):
+		if not(banda1[i][j] == banda2[i][j] == banda3[i][j] == banda4[i][j] == banda5[i][j] == banda6[i][j] == banda7[i][j]):	
+			
+			#fluxo radiacao termal emitida
+			if E0[i][j] != None and T[i][j] != None:
+				Frt_emit[i].append(E0[i][j]*0.0000000567*math.pow(T[i][j],4))
+			else:
+				Frt_emit[i].append(None)
+			
+			#Saldo da radiacao
+			if AlSuper[i][j] != None and Frt_emit[i][j] != None :
+				Rn[i].append((1 - AlSuper[i][j])*Rs + Rol_atm - Frt_emit[i][j] - (1 - E0[i][j])*Rol_atm)
+			else:
+				Rn[i].append(None)
+
+			#Fluxo de calor no solo
+			if AlSuper[i][j] != None and T[i][j] != None and Rn[i][j] != None and NDVI[i][j] != None:
+				G[i].append(((T[i][j] - 273.15)*(0.0038 + (0.0074*AlSuper))*(1-0.98*math.pow(NDVI[i][j],4)))*Rn[i][j])
+			else:
+				G[i].append(None)
+
+E0 = None
+NDVI = None
 
 EscreveResult(AlSuper,'AlbedoSuperficie.tif')
 EscreveResult(T,'Temperatura.tif')
 EscreveResult(Rn,'SaldoRadiacao.tif')
 EscreveResult(G,'FluxoDeCalorNoSolo.tif')
-
-NDVI = None
-IAF = None
-SAVI = None
+Frt_emit = None
 
 x1 = 0.1
 
@@ -247,11 +272,11 @@ limLadoDir = []
 print ('Parte 3')
 for i in range(0, linhas):
 	for i in range(0, colunas):
-		if AlSuper != None:
-			if AlSuper[i,j] <= (x2*0.2) :
-				limLadoEsq.append(T[i,j])
-			elif AlSuper[i,j] >= (x2*0.8):
-				limLadoDir.append(T[i,j])
+		if AlSuper[i][j] != None and T[i][j] != None:
+			if AlSuper[i][j] <= (x2*0.2) :
+				limLadoEsq.append(T[i][j])
+			elif AlSuper[i][j] >= (x2*0.8):
+				limLadoDir.append(T[i][j])
 
 #Pontos p/ lim superior e inferior
 limLadoEsq.sort()
@@ -260,12 +285,12 @@ limLadoDir.sort()
 y1 = y2 = y3 = y4 =0
 
 for i in range(0,20):
-	y3 += limLadoEsq[i,j]
-	y4 += limLadoDir[i,j]
+	y3 += limLadoEsq[i][j]
+	y4 += limLadoDir[i][j]
 	
-for i in range(limiteLadoDir.length -20, limiteLadoDir.length):
-	y2 += limLadoDir[i,j]
-for i in range(limiteLadoEsq.length -20, limiteLadoEsq.length):
+for i in range(len(limiteLadoDir) -20, len(limiteLadoDir)):
+	y2 += limLadoDir[i][j]
+for i in range(len(limiteLadoEsq) -20, len(limiteLadoEsq)):
 	y1 += limiteLadoEsq
 	
 y1 /= 20
@@ -288,26 +313,39 @@ m2 = (y4-y3)/(x2-x1)
 c1 = (x2*y1 - x1*y2)/(x2-x1)
 c2 = (x2*y3 - x1*y4)/(x2-x1)
 print ('Parte 4')
+
 for i in range(0, linhas):
 	for i in range(0,colunas):
-		if AlSuper != None :
+		if AlSuper[i][j] != None :
 			#fracao evaporativa
-			V_virado[i,j] = ((c1 + m1*AlSuper[i,j]) - T[i,j])/(c1 - c2 + (m1 - m2)*AlSuper[i,j])
+			if T[i][j] != None:
+				V_virado[i].append(((c1 + m1*AlSuper[i][j]) - T[i][j])/(c1 - c2 + (m1 - m2)*AlSuper[i][j]))
+			else:
+				V_virado[i].append(None)
+			if V_virado[i][j] != None and Rn[i][j] != None and G[i][j] != None:
+				#Fluxo calor sensivel
+				H[i].append((1- V_virado[i][j])*(Rn[i][j] - G[i][j]))
 
-			#Fluxo calor sensivel
-			H[i,j] = (1- V_virado[i,j])*(Rn[i,j] - G[i,j])
-
-			#Fluxo calor latente
-			LE[i,j] = V_virado[i,j] * (Rn[i,j] - G[i,j])
+				#Fluxo calor latente
+				LE[i].append(V_virado[i][j] * (Rn[i][j] - G[i][j]))
+			else:
+				H[i].append(None)
+				LE[i].append(None)
 			
 			#Saldo radiação diário
-			Rn_24h[i,j]= Rg_24h * (1.0 - AlSuper[i,j]) - 110.0 * Tao_24h
-			LE_24h[i,j]= V_virado[i,j] * Rn_24h[i,j]
-			ET_24h[i,j] = (V_virado[i,j] * Rn_24h[i,j] * 86.4) / 2450.0
-			
+			Rn_24h[i].append(Rg_24h * (1.0 - AlSuper[i][j]) - 110.0 * Tao_24h)
+			if V_virado[i][j] != None:
+				LE_24h[i].append(V_virado[i][j] * Rn_24h[i][j])
+				ET_24h[i].append((V_virado[i][j] * Rn_24h[i][j] * 86.4) / 2450.0)
+			else:
+				LE_24h[i].append(None)
+				ET_24h[i].append(None)
 print ('Parte 5')
 AlSuper = None
-T = None			
+T = None	
+G = None
+Rn = None
+		
 EscreveResult(V_virado,'FracaoEvaporativa.tif')
 EscreveResult(H,'FluxoCalorSensivel.tif')
 EscreveResult(LE,'FluxoCalorLatente.tif')
@@ -315,8 +353,6 @@ EscreveResult(Rn_24h,'RN24H.tif')
 EscreveResult(LE_24h,'LE24h.tif')
 EscreveResult(ET_24h,'EvapotranspiraçãoDiaria.tif')
 
-G = None
-Rn = None
 V_virado = None
 H = None
 LE = None
