@@ -108,7 +108,7 @@ SAVI = [[0 for x in range(colunas)] for x in range(linhas)]
 AlPlan = [[0 for x in range(colunas)] for x in range(linhas)] 
 IAF =[[0 for x in range(colunas)] for x in range(linhas)] 
 
-colunas = linhas = 4750
+colunas = linhas = 5000
 for i in range(4000,linhas):
 	for j in range(4000,colunas):
 		if banda3[i][j] != 0 and banda4[i][j] != 0:		
@@ -123,7 +123,7 @@ for i in range(4000,linhas):
 
 			#indice de Vegetacao Ajustado para os Efeitos do Solo
 			SAVI[i][j] = ((1+0.5)*(P4[i][j]-P3[i][j]))/(0.5+P4[i][j]+P3[i][j])
-			AlPlan[i][j] = 0,233*P3[i][j] + 0,157*P4[i][j]
+			AlPlan[i][j] = 0.233*P3[i][j] + 0.157*P4[i][j]
 			
 			#Indice area foliar
 			if (0.69 - SAVI[i][j])/0.59 > 0:
@@ -188,13 +188,11 @@ for i in range(4000,linhas):
 			L6[i][j] = a6 + ((b6 - a6)/255)* banda6[i][j]
 			
 			#Temperatura satelite (K)
-			if Enb[i][j] != None and (Enb[i][j]*607.76/L6[i][j]) +1 >0 :
+			if Enb[i][j] != None and L6[i][j] != 0 and (Enb[i][j]*607.76/L6[i][j]) +1 > 0 and (math.log((Enb[i][j]*607.76/L6[i][j]) +1) != 0) :
 				T[i][j] = 1260.56/(math.log((Enb[i][j]*607.76/L6[i][j]) +1))
 			else:
 				T[i][j] = None
 			AlPlan[i][j] = AlPlan[i][j] + 0.293*P1[i][j] + 0.274*P2[i][j] 
-
-	print i
 banda1 = None
 banda2 = None
 banda6 = None
@@ -231,7 +229,7 @@ for i in range(4000,linhas):
 			AlSuper[i][j] = (AlPlan[i][j] - 0.03)/(tsw*tsw)
 			
 			#Pegar o maior albedo p/ o limite
-			if (AlSuper[i][j] > x2) :
+			if (AlSuper[i][j] > x2):
 				x2 = AlSuper[i][j]
 		else:
 			AlSuper[i][j] = None
@@ -265,7 +263,7 @@ for i in range(4000,linhas):
 
 			#Fluxo de calor no solo
 			if AlSuper[i][j] != None and T[i][j] != None and Rn[i][j] != None and NDVI[i][j] != None:
-				G[i][j] = ((T[i][j] - 273.15)*(0.0038 + (0.0074*AlSuper))*(1-0.98*math.pow(NDVI[i][j],4)))*Rn[i][j]
+				G[i][j] = ((T[i][j] - 273.15)*(0.0038 + (0.0074*AlSuper[i][j]))*(1-0.98*math.pow(NDVI[i][j],4)))*Rn[i][j]
 			else:
 				G[i][j] = None
 
@@ -298,13 +296,13 @@ limLadoDir.sort()
 y1 = y2 = y3 = y4 =0
 
 for i in range(0,20):
-	y3 += limLadoEsq[i][j]
-	y4 += limLadoDir[i][j]
+	y3 += limLadoEsq[i]
+	y4 += limLadoDir[i]
 	
 for i in range(len(limiteLadoDir) -20, len(limiteLadoDir)):
-	y2 += limLadoDir[i][j]
+	y2 += limLadoDir[i]
 for i in range(len(limiteLadoEsq) -20, len(limiteLadoEsq)):
-	y1 += limiteLadoEsq
+	y1 += limiteLadoEsq[i]
 	
 y1 /= 20
 y3 /= 20
