@@ -299,10 +299,10 @@ for i in range(0,20):
 	y3 += limLadoEsq[i]
 	y4 += limLadoDir[i]
 	
-for i in range(len(limiteLadoDir) -20, len(limiteLadoDir)):
+for i in range(len(limLadoDir) -20, len(limLadoDir)):
 	y2 += limLadoDir[i]
-for i in range(len(limiteLadoEsq) -20, len(limiteLadoEsq)):
-	y1 += limiteLadoEsq[i]
+for i in range(len(limLadoEsq) -20, len(limLadoEsq)):
+	y1 += limLadoEsq[i]
 	
 y1 /= 20
 y3 /= 20
