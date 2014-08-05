@@ -29,7 +29,7 @@ class Tela:
 		self.msg.grid(row=1, column=1, columnspan=3)
 		
 		self.msg=Label(self.raiz,text='Clique em OK para iniciar o calculo')
-		self.msg.grid(row=16, column=1, columnspan=3)
+		self.msg.grid(row=19, column=1, columnspan=3)
 		
 		self.ang=Entry(self.raiz, width=10)
 		self.ang.grid(row=5, column=3, sticky=E+W, pady=3)
@@ -51,10 +51,10 @@ class Tela:
 		self.arq.grid(row=12, column=3, padx=2, pady=3)
 		
 		self.ok=Button(self.raiz, width=8, command=self.inicia,text='OK',bg = 'gray')
-		self.ok.grid(row=15, column=1, padx=2, pady=3, columnspan=2)
+		self.ok.grid(row=18, column=1, padx=2, pady=3, columnspan=2)
 		
 		self.close=Button(self.raiz, width=8, command=self.fechar,text='Fechar', bg = 'gray')
-		self.close.grid(row=15, column=2, padx=4, pady=5, columnspan=2)
+		self.close.grid(row=18, column=2, padx=4, pady=5, columnspan=2)
 	
 		self.radio1 = Radiobutton(text="Economia de Memória",value=1, command=self.select1)
 		self.radio1.grid(row=13, column=2, padx=1, pady=2)
