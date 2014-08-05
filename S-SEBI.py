@@ -25,6 +25,8 @@ print 'linhas:',linhas,' colunas:',colunas,'bandas:',NBandas,'driver:',driverEnt
 
 #----------
 
+extensao = '.tif'
+
 noValue = -9999.0
 pi = math.pi
 cosZ = math.cos((90 - 56.98100422)*pi/180) # pego do metadata da imagem - SUN_ELEVATION
@@ -67,61 +69,80 @@ except:
 
 #----------
 
-dados = entrada.GetRasterBand(1).ReadAsArray().astype(numpy.float32)
+dados = numpy.zeros([NBandas+1,linhas,colunas],dtype=numpy.float32)
 
-radiancia = descBandas[1][3] + (descBandas[1][6] * dados)
-reflectancia = p1[1] * radiancia
+#----------
 
-albedoPlanetario = descBandas[1][7] * reflectancia
+albedoPlanetario = 0
 
-maskAlbPlan = dados > 0
+for k in range(1,NBandas+1):
+    dados[k] = entrada.GetRasterBand(k).ReadAsArray().astype(numpy.float32)
+    radiancia = descBandas[k][3] + (descBandas[k][6] * dados[k])
+
+    if(k >= 2):
+        if(k == 2):
+            noDataValue = entrada.GetRasterBand(k-1).GetNoDataValue()
+
+            valueOff = dados[k-1][dados[k-1] == dados[k]]
+            valueOff = dados[k-1][valueOff != noDataValue][0]
+
+            if(valueOff.size > 0):
+                mask = numpy.logical_and(dados[k-1] != valueOff, dados[k-1] != noDataValue)
+            else:
+                mask = dados[k-1] != noDataValue
+
+            dados[k-1] = None
+
+        noDataValue = entrada.GetRasterBand(k).GetNoDataValue()
+
+        if(valueOff.size > 0):
+            mask = numpy.logical_and(mask, dados[k] != valueOff)
+
+        mask = numpy.logical_and(mask, dados[k] != noDataValue)
+
+        dados[k] = None
+
+    if(k != 6):
+        reflectancia = p1[k] * radiancia
+
+        albedoPlanetario += descBandas[k][7] * reflectancia
+
+        radiancia = None
+
+        if(k == 3):
+            reflectanciaB3 = reflectancia
+        elif(k == 4):
+            reflectanciaB4 = reflectancia
+
+        reflectancia = None
+    else:
+        radianciaB6 = radiancia
+        radiancia = None
+
+#----------
 
 dados = None
-radiancia = None
-reflectancia = None
+entrada = None
 
 #----------
 
-dados = entrada.GetRasterBand(2).ReadAsArray().astype(numpy.float32)
+def saidaImagem(nome, calculo):
+    saida = driver.Create(pastaSaida+nome+extensao,colunas,linhas,1,GDT_Float32)
+    if saida is None:
+        print 'Erro ao criar o arquivo: ' + nome+extensao
+        sys.exit(1)
 
-radiancia = descBandas[2][3] + (descBandas[2][6] * dados)
-reflectancia = p1[2] * radiancia
+    saida.SetProjection(projecao)
+    banda = saida.GetRasterBand(1)
 
-albedoPlanetario += descBandas[2][7] * reflectancia
+    banda.WriteArray(calculo,0,0)
 
-maskAlbPlan = numpy.logical_and(maskAlbPlan, dados > 0)
+    banda.SetNoDataValue(noValue)
 
-dados = None
-radiancia = None
-reflectancia = None
+    banda = None
+    saida = None
 
-#----------
-
-dados3 = entrada.GetRasterBand(3).ReadAsArray().astype(numpy.float32)
-
-radiancia = descBandas[3][3] + (descBandas[3][6] * dados3)
-reflectancia = p1[3] * radiancia
-
-albedoPlanetario += descBandas[3][7] * reflectancia
-
-maskAlbPlan = numpy.logical_and(maskAlbPlan, dados3 > 0)
-
-radiancia = None
-reflectancia = None
-
-#----------
-
-dados4 = entrada.GetRasterBand(4).ReadAsArray().astype(numpy.float32)
-
-radiancia = descBandas[4][3] + (descBandas[4][6] * dados4)
-reflectancia = p1[4] * radiancia
-
-albedoPlanetario += descBandas[4][7] * reflectancia
-
-maskAlbPlan = numpy.logical_and(maskAlbPlan, dados4 > 0)
-
-radiancia = None
-reflectancia = None
+    print nome + ' - Pronto!'
 
 #----------
 
@@ -129,199 +150,67 @@ numpy.seterr(all='ignore')
 
 #----------
 
-saidaNDVI = driver.Create(pastaSaida+'ndvi.tif',colunas,linhas,1,GDT_Float32)
-if saidaNDVI is None:
-    print 'Erro ao criar o arquivo: ' + 'ndvi.tif'
-    sys.exit(1)
+ndvi = numpy.choose(mask, (noValue, (reflectanciaB4 - reflectanciaB3) / (reflectanciaB4 + reflectanciaB3)))
 
-saidaNDVI.SetProjection(projecao)
-bandaNDVI = saidaNDVI.GetRasterBand(1)
-
-mask = numpy.logical_and(dados3 > 0, dados4 > 0)
-
-ndvi = numpy.choose(mask, (noValue, (dados4 - dados3) / (dados4 + dados3)))
-bandaNDVI.WriteArray(ndvi,0,0)
-
-bandaNDVI.SetNoDataValue(noValue)
-
-bandaNDVI = None
-saidaNDVI = None
-
-print 'NDVI - Pronto'
+saidaImagem('ndvi',ndvi)
 
 #----------
 
-saidaSAVI = driver.Create(pastaSaida+'savi.tif',colunas,linhas,1,GDT_Float32)
-if saidaSAVI is None:
-    print 'Erro ao criar o arquivo: ' + 'savi.tif'
-    sys.exit(1)
+savi = numpy.choose(mask, (noValue, ((1 + L) * (reflectanciaB4 - reflectanciaB3)) / (L + (reflectanciaB4 + reflectanciaB3))))
 
-saidaSAVI.SetProjection(projecao)
-bandaSAVI = saidaSAVI.GetRasterBand(1)
+saidaImagem('savi',savi)
 
-savi = numpy.choose(mask, (noValue, ((1 + L) * (dados4 - dados3)) / (L + (dados4 + dados3))))
-
-bandaSAVI.WriteArray(savi,0,0)
-
-bandaSAVI.SetNoDataValue(noValue)
-
-bandaSAVI = None
-saidaSAVI = None
-
-mask = None
-dados4 = None
-dados3 = None
-
-print 'SAVI - Pronto'
+reflectanciaB4 = None
+reflectanciaB3 = None
 
 #----------
 
-saidaIAF = driver.Create(pastaSaida+'iaf.tif',colunas,linhas,1,GDT_Float32)
-if saidaIAF is None:
-    print 'Erro ao criar o arquivo: ' + 'iaf.tif'
-    sys.exit(1)
+mask1 = numpy.logical_and(((0.69 - savi) / 0.59) > 0, mask)
 
-saidaIAF.SetProjection(projecao)
-bandaIAF = saidaIAF.GetRasterBand(1)
+iaf = numpy.choose(mask1, (noValue, -1 * (numpy.log((0.69 - savi) / 0.59) / 0.91)))
 
-mask = numpy.logical_and(((0.69 - savi) / 0.59) > 0, savi != noValue)
+saidaImagem('iaf',iaf)
 
-iaf = numpy.choose(mask, (noValue, -1 * (numpy.log((0.69 - savi) / 0.59) / 0.91)))
-
-bandaIAF.WriteArray(iaf,0,0)
-
-bandaIAF.SetNoDataValue(noValue)
-
-bandaIAF = None
-saidaIAF = None
-
-mask = None
+mask1 = None
 savi = None
 
-print 'IAF - Pronto'
-
 #----------
 
-dados = entrada.GetRasterBand(5).ReadAsArray().astype(numpy.float32)
+albedoSuperficie = numpy.choose(mask, (noValue, (albedoPlanetario - ap) * p2))
 
-radiancia = descBandas[5][3] + (descBandas[5][6] * dados)
-reflectancia = p1[5] * radiancia
+saidaImagem('albedoSuperficie',albedoSuperficie)
 
-albedoPlanetario += descBandas[5][7] * reflectancia
-
-maskAlbPlan = numpy.logical_and(maskAlbPlan, dados > 0)
-
-dados = None
-radiancia = None
-reflectancia = None
-
-#----------
-
-dados = entrada.GetRasterBand(6).ReadAsArray().astype(numpy.float32)
-
-radianciaB6 = descBandas[6][3] + (descBandas[6][6] * dados)
-
-maskB6 = dados > 0
-
-dados = None
-
-#----------
-
-dados = entrada.GetRasterBand(7).ReadAsArray().astype(numpy.float32)
-
-radiancia = descBandas[7][3] + (descBandas[7][6] * dados)
-reflectancia = p1[7] * radiancia
-
-albedoPlanetario += descBandas[7][7] * reflectancia
-
-maskAlbPlan = numpy.logical_and(maskAlbPlan, dados > 0)
-
-dados = None
-radiancia = None
-reflectancia = None
-
-#----------
-
-entrada = None
-
-#----------
-
-saidaAlbedoSuper = driver.Create(pastaSaida+'albedoSuperficie.tif',colunas,linhas,1,GDT_Float32)
-if saidaAlbedoSuper is None:
-    print 'Erro ao criar o arquivo: ' + 'albedoSuperficie.tif'
-    sys.exit(1)
-
-saidaAlbedoSuper.SetProjection(projecao)
-bandaAlbedoSuper = saidaAlbedoSuper.GetRasterBand(1)
-
-albedoSuperficie = numpy.choose(maskAlbPlan, (noValue, (albedoPlanetario - ap) * p2))
-
-mask = numpy.logical_and(albedoSuperficie < 0, albedoSuperficie != noValue)
-
-albedoSuperficie = numpy.choose(mask, (albedoSuperficie, 0.0))
-
-bandaAlbedoSuper.WriteArray(albedoSuperficie,0,0)
-
-bandaAlbedoSuper.SetNoDataValue(noValue)
-
-bandaAlbedoSuper = None
-saidaAlbedoSuper = None
-
-mask = None
-maskAlbPlan = None
 albedoPlanetario = None
-
-print 'Albedo Superficie - Pronto'
 
 #----------
 
 ENB = 0.97 + 0.00331 * iaf
 E0 = 0.95 + 0.01 * iaf
 
-mask = iaf >= 3
+mask1 = iaf >= 3
 
-ENB = numpy.choose(mask, (ENB, 0.98))
-E0 = numpy.choose(mask, (E0, 0.98))
+ENB = numpy.choose(mask1, (ENB, 0.98))
+E0 = numpy.choose(mask1, (E0, 0.98))
 
-mask = ndvi < 0
+mask1 = ndvi < 0
 
-ENB = numpy.choose(mask, (ENB, 0.99))
-E0 = numpy.choose(mask, (E0, 0.985))
+ENB = numpy.choose(mask1, (ENB, 0.99))
+E0 = numpy.choose(mask1, (E0, 0.985))
 
-mask = numpy.logical_or(ndvi == noValue, iaf == noValue)
-
-ENB = numpy.choose(mask, (ENB, noValue))
-E0 = numpy.choose(mask, (E0, noValue))
-
-mask = None
+mask1 = None
 iaf = None
 
 #----------
 
-saidaTempSuper = driver.Create(pastaSaida+'temperaturaSuperficie.tif',colunas,linhas,1,GDT_Float32)
-if saidaTempSuper is None:
-    print 'Erro ao criar o arquivo: ' + 'temperaturaSuperficie.tif'
-    sys.exit(1)
+mask1 = numpy.logical_and((((ENB * K1) / radianciaB6) + 1) > 0, mask)
 
-saidaTempSuper.SetProjection(projecao)
-bandaTempSuper = saidaTempSuper.GetRasterBand(1)
+temperaturaSuperficie = numpy.choose(mask1, (noValue, K2 / numpy.log(((ENB * K1) / radianciaB6) + 1)))
 
-mask = numpy.logical_and(ENB != noValue, maskB6)
+saidaImagem('temperaturaSuperficie',temperaturaSuperficie)
 
-temperaturaSuperficie = numpy.choose(mask, (noValue, K2 / numpy.log(((ENB * K1) / radianciaB6) + 1)))
-bandaTempSuper.WriteArray(temperaturaSuperficie,0,0)
-
-bandaTempSuper.SetNoDataValue(noValue)
-
-bandaTempSuper = None
-saidaTempSuper = None
-
-maskB6 = None
-mask = None
+mask1 = None
 radianciaB6 = None
 ENB = None
-
-print 'Temperatura Superficie - Pronto'
 
 #----------
 
@@ -329,65 +218,30 @@ numpy.seterr(all='warn')
 
 #----------
 
-saidaSaldoRad = driver.Create(pastaSaida+'saldoRadiacao.tif',colunas,linhas,1,GDT_Float32)
-if saidaSaldoRad is None:
-    print 'Erro ao criar o arquivo: ' + 'saldoRadiacao.tif'
-    sys.exit(1)
-
-saidaSaldoRad.SetProjection(projecao)
-bandaSaldoRad = saidaSaldoRad.GetRasterBand(1)
-
-radOndaLongaEmi = ((E0 * constSB) * (temperaturaSuperficie*temperaturaSuperficie*temperaturaSuperficie*temperaturaSuperficie))
-
-mask = numpy.logical_and(temperaturaSuperficie != noValue, albedoSuperficie != noValue)
+radOndaLongaEmi = (E0 * constSB) * numpy.power(temperaturaSuperficie,4)
 
 saldoRadiacao = numpy.choose(mask, (noValue, radOndaCurtaInci * (1 - albedoSuperficie) - radOndaLongaEmi +\
                         radOndaLongaInci - (1 - E0) * radOndaLongaInci))
 
-bandaSaldoRad.WriteArray(saldoRadiacao,0,0)
-
-bandaSaldoRad.SetNoDataValue(noValue)
-
-bandaSaldoRad = None
-saidaSaldoRad = None
+saidaImagem('saldoRadiacao',saldoRadiacao)
 
 E0 = None
 radOndaLongaEmi = None
 
-print 'Saldo Radiação - Pronto'
-
 #----------
 
-saidaFluxoCalSolo = driver.Create(pastaSaida+'fluxoCalorSolo.tif',colunas,linhas,1,GDT_Float32)
-if saidaFluxoCalSolo is None:
-    print 'Erro ao criar o arquivo: ' + 'fluxoCalorSolo.tif'
-    sys.exit(1)
+mask1 = ndvi < 0
 
-saidaFluxoCalSolo.SetProjection(projecao)
-bandaFluxoCalSolo = saidaFluxoCalSolo.GetRasterBand(1)
+fluxoCalSolo = numpy.choose(mask1, (((temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * albedoSuperficie))\
+                       * (1 - (0.98 * numpy.power(ndvi,4)))) * saldoRadiacao, G))
 
-maska = ndvi < 0
-
-fluxoCalSolo = numpy.choose(maska, (((temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * albedoSuperficie))\
-                       * (1 - (0.98 * (ndvi*ndvi*ndvi*ndvi)))) * saldoRadiacao, G))
-
-maska = None
-
-mask = numpy.logical_and(mask, ndvi != noValue)
+mask1 = None
 
 fluxoCalSolo = numpy.choose(mask, (noValue, fluxoCalSolo))
 
-bandaFluxoCalSolo.WriteArray(fluxoCalSolo,0,0)
+saidaImagem('fluxoCalSolo',fluxoCalSolo)
 
-bandaFluxoCalSolo.SetNoDataValue(noValue)
-
-bandaFluxoCalSolo = None
-saidaFluxoCalSolo = None
-
-mask = None
 ndvi = None
-
-print 'Fluxo Calor no Solo - Pronto'
 
 #----------
 
@@ -401,13 +255,13 @@ limiteLadoDir = temperaturaSuperficie[maskAlbedoSuper]
 
 maskAlbedoSuper = None
 
-mask = limiteLadoEsq != noValue
-limiteLadoEsq = limiteLadoEsq[mask]
+mask1 = limiteLadoEsq != noValue
+limiteLadoEsq = limiteLadoEsq[mask1]
 
-mask = limiteLadoDir != noValue
-limiteLadoDir = limiteLadoDir[mask]
+mask1 = limiteLadoDir != noValue
+limiteLadoDir = limiteLadoDir[mask1]
 
-mask = None
+mask1 = None
 
 limiteLadoEsq = numpy.sort(limiteLadoEsq)
 limiteLadoDir = numpy.sort(limiteLadoDir)
@@ -441,83 +295,33 @@ c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1
 
 #----------
 
-saidaFracEvapo = driver.Create(pastaSaida+'fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float32)
-if saidaFracEvapo is None:
-    print 'Erro ao criar o arquivo: ' + 'fracaoEvaporativa.tif'
-    sys.exit(1)
-
-saidaFracEvapo.SetProjection(projecao)
-bandaFracEvapo = saidaFracEvapo.GetRasterBand(1)
-
-mask = saldoRadiacao != noValue
-
 fracaoEvaporativa = numpy.choose(mask, (noValue, (c1 + (m1 * albedoSuperficie) - temperaturaSuperficie)\
                                         / ((c1 - c2) + ((m1 - m2) * albedoSuperficie))))
 
-bandaFracEvapo.WriteArray(fracaoEvaporativa,0,0)
+saidaImagem('fracaoEvaporativa',fracaoEvaporativa)
 
-bandaFracEvapo.SetNoDataValue(noValue)
-
-bandaFracEvapo = None
-saidaFracEvapo = None
-
-mask = None
 albedoSuperficie = None
 temperaturaSuperficie = None
 
-print 'Fração Evaporativa - Pronto'
-
 #----------
-
-saidaFluxCalSensi = driver.Create(pastaSaida+'fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float32)
-if saidaFluxCalSensi is None:
-    print 'Erro ao criar o arquivo: ' + 'fluxoCalorSensivel.tif'
-    sys.exit(1)
-
-saidaFluxCalSensi.SetProjection(projecao)
-bandaFluxCalSensi = saidaFluxCalSensi.GetRasterBand(1)
-
-mask = fluxoCalSolo != noValue
 
 fluxoCalorSensivel = numpy.choose(mask, (noValue, (1 - fracaoEvaporativa) * (saldoRadiacao - fluxoCalSolo)))
 
-bandaFluxCalSensi.WriteArray(fluxoCalorSensivel,0,0)
-
-bandaFluxCalSensi.SetNoDataValue(noValue)
-
-bandaFluxCalSensi = None
-saidaFluxCalSensi = None
+saidaImagem('fluxoCalorSensivel',fluxoCalorSensivel)
 
 fluxoCalorSensivel = None
 
-print 'Fluxo Calor Sensivel - Pronto'
-
 #----------
-
-saidaFluxCalLaten = driver.Create(pastaSaida+'fluxoCalorLatente.tif',colunas,linhas,1,GDT_Float32)
-if saidaFluxCalLaten is None:
-    print 'Erro ao criar o arquivo: ' + 'fluxoCalorLatente.tif'
-    sys.exit(1)
-
-saidaFluxCalLaten.SetProjection(projecao)
-bandaFluxCalLaten = saidaFluxCalLaten.GetRasterBand(1)
 
 fluxoCalorLatente = numpy.choose(mask, (noValue, fracaoEvaporativa * (saldoRadiacao - fluxoCalSolo)))
 
-bandaFluxCalLaten.WriteArray(fluxoCalorLatente,0,0)
-
-bandaFluxCalLaten.SetNoDataValue(noValue)
-
-bandaFluxCalLaten = None
-saidaFluxCalLaten = None
+saidaImagem('fluxoCalorLatente',fluxoCalorLatente)
 
 mask = None
 fluxoCalorLatente = None
 saldoRadiacao = None
 fluxoCalSolo = None
 fracaoEvaporativa = None
-
-print 'Fluxo Calor Latente - Pronto'
 
 #----------
 
