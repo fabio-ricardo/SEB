@@ -41,6 +41,7 @@ def saidaImagem(img,rows,cols,bandas):
 		print 'Banda'+str(i+1)+' escrita.'
 	saida = None
 	print 'Imagem Pronta'
-
+saidaImagem(entrada,linhas,colunas,NBandas)
 #parâmetros: imagem, qtd linhas desejadas, qtd colunas desejadas, qtd bandas
-saidaImagem(entrada,linhas-6000,colunas-6000,NBandas)
+for i in range(1000,7000,1000):
+	saidaImagem(entrada,i,i,NBandas)
