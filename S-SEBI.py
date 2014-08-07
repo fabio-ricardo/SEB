@@ -29,23 +29,32 @@ extensao = '.tif'
 
 noValue = -9999.0
 pi = math.pi
-cosZ = math.cos((90 - 56.98100422)*pi/180) # pego do metadata da imagem - SUN_ELEVATION
-dr = 1+0.033*math.cos((272*2*pi)/365) # 29 de setembro de 2011
+Z = 50.24
+cosZ = math.cos((90 - Z) * pi / 180)
+julianDay = 248.0
+dr = 1.0 + 0.033 * math.cos((julianDay * 2 * pi) / 365)
 ap = 0.03
-z = 200
-tsw = 0.75 + 2*0.00001 * z
-p2 = 1 / (tsw * tsw)
-L = 0.5
+Ta = 32.74
+UR = 36.46
+ea = (0.61078 * math.exp(17.269 * Ta / (237.3 + Ta))) * UR / 100.0
+P = 99.3
+W = 0.14 * ea * P + 2.1
+Kt = 1.0
+tsw = 0.35 + 0.627 * math.exp((-0.00146 * P / (Kt * cosZ)) - 0.075 * math.pow((W / cosZ), 0.4))
+p2 = 1.0 / (tsw * tsw)
+L = 0.1
 K1 = 607.76
 K2 = 1260.56
-constSB = 0.0000000567
-S = 1367
-radOndaCurtaInci = S * cosZ * dr * tsw
-Ea = 0.85 * math.pow(-1 * math.log(tsw),0.09)
-Ta = 295
-radOndaLongaInci = Ea * constSB * math.pow(Ta,4)
+constSB = 5.67E-8
+S = 1367.0
+T0 = 273.15
+Ea = 0.625 * math.pow((1000.0 * ea / (Ta + T0)), 0.131)
+radOndaCurtaInci = (S * cosZ * cosZ) / (1.085 * cosZ + 10.0 * ea * (2.7 + cosZ) * 0.001 + 0.2)
+radOndaLongaInci = Ea * constSB * math.pow(Ta + T0, 4)
 G = 0.5
 qtdPontos = 20
+Rg24h = 243.95
+Tao24h = 0.63
 
 p1 = numpy.empty([NBandas+1],dtype=numpy.float32)
 p1[0] = 0
@@ -146,10 +155,6 @@ def saidaImagem(nome, calculo):
 
 #----------
 
-numpy.seterr(all='ignore')
-
-#----------
-
 ndvi = numpy.choose(mask, (noValue, (reflectanciaB4 - reflectanciaB3) / (reflectanciaB4 + reflectanciaB3)))
 
 saidaImagem('ndvi',ndvi)
@@ -165,6 +170,10 @@ reflectanciaB3 = None
 
 #----------
 
+numpy.seterr(all='ignore')
+
+#----------
+
 mask1 = numpy.logical_and(((0.69 - savi) / 0.59) > 0, mask)
 
 iaf = numpy.choose(mask1, (noValue, -1 * (numpy.log((0.69 - savi) / 0.59) / 0.91)))
@@ -172,7 +181,10 @@ iaf = numpy.choose(mask1, (noValue, -1 * (numpy.log((0.69 - savi) / 0.59) / 0.91
 saidaImagem('iaf',iaf)
 
 mask1 = None
-savi = None
+
+#----------
+
+numpy.seterr(all='warn')
 
 #----------
 
@@ -184,7 +196,15 @@ albedoPlanetario = None
 
 #----------
 
-ENB = 0.97 + 0.00331 * iaf
+mask1 = savi <= 0.1
+
+iaf = numpy.choose(mask1,(iaf, 0.0))
+
+mask1 = savi >= 0.687
+
+iaf = numpy.choose(mask1,(iaf, 6.0))
+
+ENB = 0.97 + 0.0033 * iaf
 E0 = 0.95 + 0.01 * iaf
 
 mask1 = iaf >= 3
@@ -192,36 +212,30 @@ mask1 = iaf >= 3
 ENB = numpy.choose(mask1, (ENB, 0.98))
 E0 = numpy.choose(mask1, (E0, 0.98))
 
-mask1 = ndvi < 0
+mask1 = ndvi <= 0
 
 ENB = numpy.choose(mask1, (ENB, 0.99))
 E0 = numpy.choose(mask1, (E0, 0.985))
 
 mask1 = None
+savi = None
 iaf = None
 
 #----------
 
-mask1 = numpy.logical_and((((ENB * K1) / radianciaB6) + 1) > 0, mask)
-
-temperaturaSuperficie = numpy.choose(mask1, (noValue, K2 / numpy.log(((ENB * K1) / radianciaB6) + 1)))
+temperaturaSuperficie = numpy.choose(mask, (noValue, K2 / numpy.log(((ENB * K1) / radianciaB6) + 1.0)))
 
 saidaImagem('temperaturaSuperficie',temperaturaSuperficie)
 
-mask1 = None
 radianciaB6 = None
 ENB = None
 
 #----------
 
-numpy.seterr(all='warn')
-
-#----------
-
 radOndaLongaEmi = (E0 * constSB) * numpy.power(temperaturaSuperficie,4)
 
-saldoRadiacao = numpy.choose(mask, (noValue, radOndaCurtaInci * (1 - albedoSuperficie) - radOndaLongaEmi +\
-                        radOndaLongaInci - (1 - E0) * radOndaLongaInci))
+saldoRadiacao = numpy.choose(mask, (noValue, ((1.0 - albedoSuperficie) * radOndaCurtaInci) +\
+                                    (E0 * radOndaLongaInci - radOndaLongaEmi)))
 
 saidaImagem('saldoRadiacao',saldoRadiacao)
 
@@ -233,7 +247,7 @@ radOndaLongaEmi = None
 mask1 = ndvi < 0
 
 fluxoCalSolo = numpy.choose(mask1, (((temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * albedoSuperficie))\
-                       * (1 - (0.98 * numpy.power(ndvi,4)))) * saldoRadiacao, G))
+                       * (1.0 - (0.98 * numpy.power(ndvi,4)))) * saldoRadiacao, G))
 
 mask1 = None
 
@@ -300,7 +314,6 @@ fracaoEvaporativa = numpy.choose(mask, (noValue, (c1 + (m1 * albedoSuperficie) -
 
 saidaImagem('fracaoEvaporativa',fracaoEvaporativa)
 
-albedoSuperficie = None
 temperaturaSuperficie = None
 
 #----------
@@ -317,11 +330,20 @@ fluxoCalorLatente = numpy.choose(mask, (noValue, fracaoEvaporativa * (saldoRadia
 
 saidaImagem('fluxoCalorLatente',fluxoCalorLatente)
 
+#----------
+
+evapotranspiracao24h = numpy.choose(mask, (noValue, (fracaoEvaporativa * (Rg24h * (1.0 - albedoSuperficie)\
+                                                    - 110.0 * Tao24h) * 86.4) / 2450.0))
+
+saidaImagem('evapotranspiracao24h',evapotranspiracao24h)
+
 mask = None
+evapotranspiracao24h = None
 fluxoCalorLatente = None
-saldoRadiacao = None
-fluxoCalSolo = None
 fracaoEvaporativa = None
+fluxoCalSolo = None
+saldoRadiacao = None
+albedoSuperficie = None
 
 #----------
 
