@@ -60,7 +60,7 @@ p1 = numpy.zeros([NBandas+1],dtype=numpy.float32)
 
 #----------
 
-for k in range(1,NBandas+1):
+for k in xrange(1,NBandas+1):
     if (k != 6):
         p1[k] = pi / (descBandas[k][5] * cosZ * dr)
 
@@ -82,7 +82,7 @@ dados = numpy.empty([NBandas+1],dtype=object)
 
 albedoPlanetario = 0
 
-for k in range(1,NBandas+1):
+for k in xrange(1,NBandas+1):
     dados[k] = entrada.GetRasterBand(k).ReadAsArray().astype(numpy.float32)
     radiancia = descBandas[k][3] + (descBandas[k][6] * dados[k])
 

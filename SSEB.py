@@ -56,13 +56,11 @@ qtdPontos = 3
 Rg24h = 243.95
 Tao24h = 0.63
 
-p1 = numpy.empty([NBandas+1],dtype=numpy.float32)
-p1[0] = 0
-p1[6] = 0
+p1 = numpy.zeros([NBandas+1],dtype=numpy.float32)
 
 #----------
 
-for k in range(1,NBandas+1):
+for k in xrange(1,NBandas+1):
     if (k != 6):
         p1[k] = pi / (descBandas[k][5] * cosZ * dr)
 
@@ -78,13 +76,13 @@ except:
 
 #----------
 
-dados = numpy.zeros([NBandas+1,linhas,colunas],dtype=numpy.float32)
+dados = numpy.empty([NBandas+1],dtype=object)
 
 #----------
 
 albedoPlanetario = 0
 
-for k in range(1,NBandas+1):
+for k in xrange(1,NBandas+1):
     dados[k] = entrada.GetRasterBand(k).ReadAsArray().astype(numpy.float32)
     radiancia = descBandas[k][3] + (descBandas[k][6] * dados[k])
 
@@ -271,7 +269,7 @@ ndvi.reshape(-1)
 tempSuperficie = tempSuperficie[mask]
 ndvi = ndvi[mask]
 
-for i in range(qtdPontos):
+for i in xrange(qtdPontos):
     if hotNdvi.size < qtdPontos:
         tempNdviIgual = numpy.array([])
 
@@ -297,7 +295,7 @@ for i in range(qtdPontos):
 
             coldTemp = numpy.append(coldTemp,tempNdviIgual[:tamTempNdviIg])
 
-            for j in range(tamTempNdviIg-1):
+            for j in xrange(tamTempNdviIg-1):
                 hotNdvi = numpy.append(hotNdvi,hotNdvi[posUlt])
 
         else:
@@ -330,7 +328,7 @@ for i in range(qtdPontos):
 
             hotTemp = numpy.append(hotTemp,tempNdviIgual[:tamTempNdviIg])
 
-            for j in range(tamTempNdviIg-1):
+            for j in xrange(tamTempNdviIg-1):
                 coldNdvi = numpy.append(coldNdvi,coldNdvi[posUlt])
 
         else:
