@@ -66,7 +66,7 @@ for k in range(1,NBandas+1):
 
 #----------
 
-pastaSaida = '1S-SEBI__'+nomeArquivoEntrada+'/'
+pastaSaida = 'S-SEBI__'+nomeArquivoEntrada+'/'
 
 try:
     os.mkdir(pastaSaida)
