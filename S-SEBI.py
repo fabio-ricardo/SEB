@@ -66,7 +66,7 @@ for k in range(1,NBandas+1):
 
 #----------
 
-pastaSaida = 'S-SEBI__'+nomeArquivoEntrada+'/'
+pastaSaida = '1S-SEBI__'+nomeArquivoEntrada+'/'
 
 try:
     os.mkdir(pastaSaida)
@@ -76,7 +76,7 @@ except:
 
 #----------
 
-dados = numpy.empty([NBandas+1,linhas,colunas],dtype=numpy.float32)
+dados = numpy.empty([NBandas+1],dtype=object)
 
 #----------
 
@@ -92,7 +92,7 @@ for k in range(1,NBandas+1):
 
             valueOff = dados[k-1][dados[k-1] == dados[k]]
             valueOff = dados[k-1][valueOff != noDataValue][0]
-            
+
             if(valueOff.size > 0):
                 mask = numpy.logical_and(dados[k-1] != valueOff, dados[k-1] != noDataValue)
             else:
