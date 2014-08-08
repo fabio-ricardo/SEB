@@ -76,7 +76,7 @@ except:
 
 #----------
 
-dados = numpy.empty([NBandas+1],dtype=object)
+dados = numpy.empty([NBandas+1],dtype=numpy.ndarray)
 
 #----------
 
