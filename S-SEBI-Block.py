@@ -118,7 +118,7 @@ saidaFluxoCalSolo, bandaFluxoCalSolo = criarImagem('fluxoCalorSolo')
 
 #----------
 
-#numpy.seterr(all='ignore')
+numpy.seterr(all='ignore')
 
 #----------
 
@@ -290,7 +290,7 @@ for i in xrange(0,linhas,yBlockSize):
 
 #----------
 
-#numpy.seterr(all='warn')
+numpy.seterr(all='warn')
 
 #----------
 
