@@ -86,6 +86,18 @@ for k in xrange(1,NBandas+1):
     dados[k] = entrada.GetRasterBand(k).ReadAsArray().astype(numpy.float32)
     radiancia = descBandas[k][3] + (descBandas[k][6] * dados[k])
 
+    if (k == 2):
+        mask = dados[k-1] == dados[k]
+        dados[k-1] = None
+    elif(k > 2):
+        mask = valueOff == dados[k]
+
+    if(k != NBandas and k >= 2):
+        valueOff = numpy.choose(mask,(numpy.nan, dados[k]))
+
+    if(k >= 2):
+        dados[k] = None
+
     if(k != 6):
         reflectancia = p1[k] * radiancia
 
@@ -104,18 +116,6 @@ for k in xrange(1,NBandas+1):
         radiancia = None
 
 #----------
-
-for k in xrange(2,NBandas+1):
-    if (k == 2):
-        mask = dados[k-1] == dados[k]
-        dados[k-1] = None
-    else:
-        mask = valueOff == dados[k]
-
-    if(k != NBandas):
-        valueOff = numpy.choose(mask,(numpy.nan, dados[k]))
-
-    dados[k] = None
 
 mask = numpy.choose(mask,(True,False))
 
