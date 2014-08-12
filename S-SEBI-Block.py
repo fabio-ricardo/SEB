@@ -25,26 +25,50 @@ print 'linhas:',linhas,' colunas:',colunas,'bandas:',NBandas,'driver:',driverEnt
 
 #----------
 
+extensao = '.tif'
+
 noValue = -9999.0
 pi = math.pi
-cosZ = math.cos((90 - 56.98100422)*pi/180) # pego do metadata da imagem - SUN_ELEVATION
-dr = 1+0.033*math.cos((272*2*pi)/365) # 29 de setembro de 2011
+Z = 50.24
+cosZ = math.cos((90 - Z) * pi / 180)
+julianDay = 248.0
+dr = 1.0 + 0.033 * math.cos((julianDay * 2 * pi) / 365)
 ap = 0.03
-z = 200
-tsw = 0.75 + 2*0.00001 * z
-p2 = 1 / (tsw * tsw)
-albedoSupMax = 0
-L = 0.5
+Ta = 32.74
+UR = 36.46
+ea = (0.61078 * math.exp(17.269 * Ta / (237.3 + Ta))) * UR / 100.0
+P = 99.3
+W = 0.14 * ea * P + 2.1
+Kt = 1.0
+tsw = 0.35 + 0.627 * math.exp((-0.00146 * P / (Kt * cosZ)) - 0.075 * math.pow((W / cosZ), 0.4))
+p2 = 1.0 / (tsw * tsw)
+L = 0.1
 K1 = 607.76
 K2 = 1260.56
-constSB = 0.0000000567
-S = 1367
-radOndaCurtaInci = S * cosZ * dr * tsw
-Ea = 0.85 * math.pow(-1 * math.log(tsw),0.09)
-Ta = 295
-radOndaLongaInci = Ea * constSB * math.pow(Ta,4)
+constSB = 5.67E-8
+S = 1367.0
+T0 = 273.15
+Ea = 0.625 * math.pow((1000.0 * ea / (Ta + T0)), 0.131)
+radOndaCurtaInci = (S * cosZ * cosZ) / (1.085 * cosZ + 10.0 * ea * (2.7 + cosZ) * 0.001 + 0.2)
+radOndaLongaInci = Ea * constSB * math.pow(Ta + T0, 4)
 G = 0.5
 qtdPontos = 20
+Rg24h = 243.95
+Tao24h = 0.63
+
+albedoSupMax = 0
+
+bandaEntrada = numpy.empty([NBandas+1],dtype=osgeo.gdal.Band)
+
+p1 = numpy.zeros([NBandas+1],dtype=numpy.float32)
+
+#----------
+
+for k in xrange(1,NBandas+1):
+    if (k != 6):
+        p1[k] = pi / (descBandas[k][5] * cosZ * dr)
+
+    bandaEntrada[k] = entrada.GetRasterBand(k)
 
 #----------
 
@@ -58,55 +82,234 @@ except:
 
 #----------
 
-saidaNDVI = driver.Create(pastaSaida+'ndvi.tif',colunas,linhas,1,GDT_Float32)
-if saidaNDVI is None:
-    print 'Erro ao criar o arquivo: ' + 'ndvi.tif'
-    sys.exit(1)
-saidaNDVI.SetProjection(projecao)
+def criarImagem(nome):
+    saida = driver.Create(pastaSaida+nome+extensao,colunas,linhas,1,GDT_Float32)
+    if saida is None:
+        print 'Erro ao criar o arquivo: ' + nome+extensao
+        sys.exit(1)
+    saida.SetProjection(projecao)
 
-saidaSAVI = driver.Create(pastaSaida+'savi.tif',colunas,linhas,1,GDT_Float32)
-if saidaSAVI is None:
-    print 'Erro ao criar o arquivo: ' + 'savi.tif'
-    sys.exit(1)
-saidaSAVI.SetProjection(projecao)
-
-saidaIAF = driver.Create(pastaSaida+'iaf.tif',colunas,linhas,1,GDT_Float32)
-if saidaIAF is None:
-    print 'Erro ao criar o arquivo: ' + 'iaf.tif'
-    sys.exit(1)
-saidaIAF.SetProjection(projecao)
-
-saidaAlbedoSuper = driver.Create(pastaSaida+'albedoSuperficie.tif',colunas,linhas,1,GDT_Float32)
-if saidaAlbedoSuper is None:
-    print 'Erro ao criar o arquivo: ' + 'albedoSuperficie.tif'
-    sys.exit(1)
-saidaAlbedoSuper.SetProjection(projecao)
-
-saidaTempSuper = driver.Create(pastaSaida+'temperaturaSuperficie.tif',colunas,linhas,1,GDT_Float32)
-if saidaTempSuper is None:
-    print 'Erro ao criar o arquivo: ' + 'temperaturaSuperficie.tif'
-    sys.exit(1)
-saidaTempSuper.SetProjection(projecao)
-
-saidaSaldoRad = driver.Create(pastaSaida+'saldoRadiacao.tif',colunas,linhas,1,GDT_Float32)
-if saidaSaldoRad is None:
-    print 'Erro ao criar o arquivo: ' + 'saldoRadiacao.tif'
-    sys.exit(1)
-saidaSaldoRad.SetProjection(projecao)
-
-saidaFluxoCalSolo = driver.Create(pastaSaida+'fluxoCalorSolo.tif',colunas,linhas,1,GDT_Float32)
-if saidaFluxoCalSolo is None:
-    print 'Erro ao criar o arquivo: ' + 'fluxoCalorSolo.tif'
-    sys.exit(1)
-saidaFluxoCalSolo.SetProjection(projecao)
+    return saida, saida.GetRasterBand(1)
 
 #----------
 
-bandaEntrada = numpy.empty([NBandas+1],dtype=osgeo.gdal.Band)
-bandaEntrada[0] = 0
-p1 = numpy.empty([NBandas+1],dtype=numpy.float32)
-p1[0] = 0
-p1[6] = 0
+def fecharImagem(nome, banda):
+    banda.SetNoDataValue(noValue)
+
+    print nome+' - Pronto!'
+
+    return None, None
+
+#----------
+
+saidaNDVI, bandaNDVI = criarImagem('ndvi')
+
+saidaSAVI, bandaSAVI = criarImagem('savi')
+
+saidaIAF, bandaIAF = criarImagem('iaf')
+
+saidaAlbedoSuper, bandaAlbedoSuper = criarImagem('albedoSuperficie')
+
+saidaTempSuper, bandaTempSuper = criarImagem('temperaturaSuperficie')
+
+saidaSaldoRad, bandaSaldoRad = criarImagem('saldoRadiacao')
+
+saidaFluxoCalSolo, bandaFluxoCalSolo = criarImagem('fluxoCalorSolo')
+
+#----------
+
+#numpy.seterr(all='ignore')
+
+#----------
+
+xBlockSize = 256
+yBlockSize = 256
+
+#----------
+
+for i in xrange(0,linhas,yBlockSize):
+    if i + yBlockSize < linhas:
+        lerLinhas = yBlockSize
+    else:
+        lerLinhas = linhas - i
+
+    for j in xrange(0,colunas,xBlockSize):
+        if j + xBlockSize < colunas:
+            lerColunas = xBlockSize
+        else:
+            lerColunas = colunas - j
+
+        #----------
+
+        dados = numpy.empty([NBandas+1],dtype=numpy.ndarray)
+
+        albedoPlanetario = 0
+
+        for k in xrange(1,NBandas+1):
+            dados[k] = bandaEntrada[k].ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
+            radiancia = descBandas[k][3] + (descBandas[k][6] * dados[k])
+
+            if (k == 2):
+                mask = dados[k-1] == dados[k]
+                dados[k-1] = None
+            elif(k > 2):
+                mask = valueOff == dados[k]
+
+            if(k != NBandas and k >= 2):
+                valueOff = numpy.choose(mask,(numpy.nan, dados[k]))
+
+            if(k >= 2):
+                dados[k] = None
+
+            if(k != 6):
+                reflectancia = p1[k] * radiancia
+
+                albedoPlanetario += descBandas[k][7] * reflectancia
+
+                radiancia = None
+
+                if(k == 3):
+                    reflectanciaB3 = reflectancia
+                elif(k == 4):
+                    reflectanciaB4 = reflectancia
+
+                reflectancia = None
+            else:
+                radianciaB6 = radiancia
+                radiancia = None
+
+        mask = numpy.choose(mask,(True,False))
+
+        #----------
+
+        valueOff = None
+        dados = None
+
+        #----------
+
+        ndvi = numpy.choose(mask, (noValue, (reflectanciaB4 - reflectanciaB3) / (reflectanciaB4 + reflectanciaB3)))
+        bandaNDVI.WriteArray(ndvi,j,i)
+
+        #----------
+
+        savi = numpy.choose(mask, (noValue, ((1 + L) * (reflectanciaB4 - reflectanciaB3)) / (L + (reflectanciaB4 + reflectanciaB3))))
+        bandaSAVI.WriteArray(savi,j,i)
+
+        reflectanciaB4 = None
+        reflectanciaB3 = None
+
+        #----------
+
+        mask1 = numpy.logical_and(((0.69 - savi) / 0.59) > 0, mask)
+
+        iaf = numpy.choose(mask1, (noValue, -1 * (numpy.log((0.69 - savi) / 0.59) / 0.91)))
+        bandaIAF.WriteArray(iaf,j,i)
+
+        mask1 = None
+
+        #----------
+
+        albedoSuperficie = numpy.choose(mask, (noValue, (albedoPlanetario - ap) * p2))
+        bandaAlbedoSuper.WriteArray(albedoSuperficie,j,i)
+
+        albedoPlanetario = None
+
+        #----------
+
+        mask1 = savi <= 0.1
+
+        iaf = numpy.choose(mask1,(iaf, 0.0))
+
+        mask1 = savi >= 0.687
+
+        iaf = numpy.choose(mask1,(iaf, 6.0))
+
+        ENB = 0.97 + 0.0033 * iaf
+        E0 = 0.95 + 0.01 * iaf
+
+        mask1 = iaf >= 3
+
+        ENB = numpy.choose(mask1, (ENB, 0.98))
+        E0 = numpy.choose(mask1, (E0, 0.98))
+
+        mask1 = ndvi <= 0
+
+        ENB = numpy.choose(mask1, (ENB, 0.99))
+        E0 = numpy.choose(mask1, (E0, 0.985))
+
+        mask1 = None
+        savi = None
+        iaf = None
+
+        #----------
+
+        temperaturaSuperficie = numpy.choose(mask, (noValue, K2 / numpy.log(((ENB * K1) / radianciaB6) + 1.0)))
+        bandaTempSuper.WriteArray(temperaturaSuperficie,j,i)
+
+        radianciaB6 = None
+        ENB = None
+
+        #----------
+
+        radOndaLongaEmi = (E0 * constSB) * numpy.power(temperaturaSuperficie,4)
+
+        saldoRadiacao = numpy.choose(mask, (noValue, ((1.0 - albedoSuperficie) * radOndaCurtaInci) +\
+                                    (E0 * radOndaLongaInci - radOndaLongaEmi)))
+
+        bandaSaldoRad.WriteArray(saldoRadiacao,j,i)
+
+        E0 = None
+        radOndaLongaEmi = None
+
+        #----------
+
+        mask1 = ndvi < 0
+
+        fluxoCalSolo = numpy.choose(mask1, (((temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * albedoSuperficie))\
+                       * (1.0 - (0.98 * numpy.power(ndvi,4)))) * saldoRadiacao, G))
+
+        mask1 = None
+
+        fluxoCalSolo = numpy.choose(mask, (noValue, fluxoCalSolo))
+        bandaFluxoCalSolo.WriteArray(fluxoCalSolo,j,i)
+
+        mask = None
+        ndvi = None
+        temperaturaSuperficie = None
+        saldoRadiacao = None
+        fluxoCalSolo = None
+
+        #----------
+
+        if numpy.amax(albedoSuperficie) > albedoSupMax:
+            albedoSupMax = numpy.amax(albedoSuperficie)
+
+        albedoSuperficie = None
+
+        #----------
+
+#----------
+
+#numpy.seterr(all='warn')
+
+#----------
+
+bandaEntrada = None
+entrada = None
+
+#----------
+
+saidaNDVI, bandaNDVI = fecharImagem('ndvi',bandaNDVI)
+
+#----------
+
+saidaSAVI, bandaSAVI = fecharImagem('savi',bandaSAVI)
+
+#----------
+
+saidaIAF, bandaIAF = fecharImagem('iaf',bandaIAF)
+
+#----------
 
 limSupEsq = numpy.zeros([qtdPontos],dtype=numpy.float32)
 limInfEsq = numpy.zeros([qtdPontos],dtype=numpy.float32)
@@ -116,226 +319,15 @@ limSupDir = numpy.zeros([qtdPontos],dtype=numpy.float32)
 limInfDir = numpy.zeros([qtdPontos],dtype=numpy.float32)
 limDirPVez = True
 
-# ----------
-
-for k in range(1,NBandas+1):
-    bandaEntrada[k] = entrada.GetRasterBand(k)
-
-    if (k != 6):
-        p1[k] = pi / (descBandas[k][5] * cosZ * dr)
-
-bandaAlbedoSuper = saidaAlbedoSuper.GetRasterBand(1)
-bandaNDVI = saidaNDVI.GetRasterBand(1)
-bandaSAVI = saidaSAVI.GetRasterBand(1)
-bandaIAF = saidaIAF.GetRasterBand(1)
-bandaTempSuper = saidaTempSuper.GetRasterBand(1)
-bandaSaldoRad = saidaSaldoRad.GetRasterBand(1)
-bandaFluxoCalSolo = saidaFluxoCalSolo.GetRasterBand(1)
-
 #----------
 
-numpy.seterr(all='ignore')
-
-#----------
-
-xBlockSize = 256
-yBlockSize = 256
-
-for i in range(0,linhas,yBlockSize):
+for i in xrange(0,linhas,yBlockSize):
     if i + yBlockSize < linhas:
         lerLinhas = yBlockSize
     else:
         lerLinhas = linhas - i
 
-    for j in range(0,colunas,xBlockSize):
-        if j + xBlockSize < colunas:
-            lerColunas = xBlockSize
-        else:
-            lerColunas = colunas - j
-
-        #----------
-
-        dados = numpy.empty([NBandas+1,lerLinhas,lerColunas],dtype=numpy.float32)
-        dados[0] = 0
-
-        albedoPlanetario = 0
-        maskAlbPlan = 1
-
-        for k in range(1,NBandas+1):
-            dados[k] = bandaEntrada[k].ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
-
-            if (k == 6):
-                radianciaB6 = descBandas[k][3] + (descBandas[k][6] * dados[k])
-                maskB6 = dados[k] > 0
-            else:
-                radiancia = descBandas[k][3] + (descBandas[k][6] * dados[k])
-                reflectancia = p1[k] * radiancia
-
-                if (k == 3):
-                    dados3 = dados[k]
-                if (k == 4):
-                    dados4 = dados[k]
-
-                albedoPlanetario += descBandas[k][7] * reflectancia
-
-                maskAlbPlan = numpy.logical_and(maskAlbPlan,dados[k] > 0)
-
-        dados = None
-        radiancia = None
-        reflectancia = None
-
-        #----------
-
-        mask = numpy.logical_and(dados3 > 0, dados4 > 0)
-
-        ndvi = numpy.choose(mask, (noValue, (dados4 - dados3) / (dados4 + dados3)))
-        bandaNDVI.WriteArray(ndvi,j,i)
-
-        #----------
-
-        savi = numpy.choose(mask, (noValue, ((1 + L) * (dados4 - dados3)) / (L + (dados4 + dados3))))
-        bandaSAVI.WriteArray(savi,j,i)
-
-        mask = None
-        dados4 = None
-        dados3 = None
-
-        #----------
-
-        mask = numpy.logical_and(((0.69 - savi) / 0.59) > 0, savi != noValue)
-
-        iaf = numpy.choose(mask, (noValue, -1 * (numpy.log((0.69 - savi) / 0.59) / 0.91)))
-        bandaIAF.WriteArray(iaf,j,i)
-
-        mask = None
-        savi = None
-
-        #----------
-
-        albedoSuperficie = numpy.choose(maskAlbPlan, (noValue, (albedoPlanetario - ap) * p2))
-
-        mask = numpy.logical_and(albedoSuperficie < 0, albedoSuperficie != noValue)
-
-        albedoSuperficie = numpy.choose(mask, (albedoSuperficie, 0.0))
-
-        bandaAlbedoSuper.WriteArray(albedoSuperficie,j,i)
-
-        mask = None
-        maskAlbPlan = None
-        albedoPlanetario = None
-
-        #----------
-
-        ENB = 0.97 + 0.00331 * iaf
-        E0 = 0.95 + 0.01 * iaf
-
-        mask = iaf >= 3
-
-        ENB = numpy.choose(mask, (ENB, 0.98))
-        E0 = numpy.choose(mask, (E0, 0.98))
-
-        mask = ndvi < 0
-
-        ENB = numpy.choose(mask, (ENB, 0.99))
-        E0 = numpy.choose(mask, (E0, 0.985))
-
-        mask = numpy.logical_or(ndvi == noValue, iaf == noValue)
-
-        ENB = numpy.choose(mask, (ENB, noValue))
-        E0 = numpy.choose(mask, (E0, noValue))
-
-        mask = None
-        iaf = None
-
-        #----------
-
-        mask = numpy.logical_and(ENB != noValue, maskB6)
-
-        temperaturaSuperficie = numpy.choose(mask, (noValue, K2 / numpy.log(((ENB * K1) / radianciaB6) + 1)))
-        bandaTempSuper.WriteArray(temperaturaSuperficie,j,i)
-
-        maskB6 = None
-        mask = None
-        radianciaB6 = None
-        ENB = None
-
-        #----------
-
-        radOndaLongaEmi = (E0 * constSB) * (temperaturaSuperficie*temperaturaSuperficie*\
-                                            temperaturaSuperficie*temperaturaSuperficie)
-
-        mask = numpy.logical_and(temperaturaSuperficie != noValue, albedoSuperficie != noValue)
-
-        saldoRadiacao = numpy.choose(mask, (noValue, radOndaCurtaInci * (1 - albedoSuperficie) - radOndaLongaEmi +\
-                        radOndaLongaInci - (1 - E0) * radOndaLongaInci))
-
-        bandaSaldoRad.WriteArray(saldoRadiacao,j,i)
-
-        E0 = None
-        radOndaLongaEmi = None
-
-        #----------
-
-        maska = ndvi < 0
-
-        fluxoCalSolo = numpy.choose(maska, (((temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * albedoSuperficie))\
-                       * (1 - (0.98 * (ndvi*ndvi*ndvi*ndvi)))) * saldoRadiacao, G))
-
-        maska = None
-
-        mask = numpy.logical_and(mask, ndvi != noValue)
-
-        fluxoCalSolo = numpy.choose(mask, (noValue, fluxoCalSolo))
-        bandaFluxoCalSolo.WriteArray(fluxoCalSolo,j,i)
-
-        mask = None
-        ndvi = None
-        saldoRadiacao = None
-        fluxoCalSolo = None
-
-        #----------
-
-        if numpy.amax(albedoSuperficie) > albedoSupMax:
-            albedoSupMax = numpy.amax(albedoSuperficie)
-
-        #----------
-
-#----------
-
-numpy.seterr(all='warn')
-
-#----------
-
-bandaEntrada = None
-entrada = None
-
-bandaNDVI.SetNoDataValue(noValue)
-bandaNDVI = None
-saidaNDVI = None
-
-print 'NDVI - Pronto'
-
-bandaSAVI.SetNoDataValue(noValue)
-bandaSAVI = None
-saidaSAVI = None
-
-print 'SAVI - Pronto'
-
-bandaIAF.SetNoDataValue(noValue)
-bandaIAF = None
-saidaIAF = None
-
-print 'IAF - Pronto'
-
-#----------
-
-for i in range(0,linhas,yBlockSize):
-    if i + yBlockSize < linhas:
-        lerLinhas = yBlockSize
-    else:
-        lerLinhas = linhas - i
-
-    for j in range(0,colunas,xBlockSize):
+    for j in xrange(0,colunas,xBlockSize):
         if j + xBlockSize < colunas:
             lerColunas = xBlockSize
         else:
@@ -358,13 +350,13 @@ for i in range(0,linhas,yBlockSize):
         albedoSuperficie = None
         temperaturaSuperficie = None
 
-        mask = limiteLadoEsq != noValue
-        limiteLadoEsq = limiteLadoEsq[mask]
+        mask1 = limiteLadoEsq != noValue
+        limiteLadoEsq = limiteLadoEsq[mask1]
 
-        mask = limiteLadoDir != noValue
-        limiteLadoDir = limiteLadoDir[mask]
+        mask1 = limiteLadoDir != noValue
+        limiteLadoDir = limiteLadoDir[mask1]
 
-        mask = None
+        mask1 = None
 
         if (limiteLadoEsq.size > 0):
             if (limEsqPVez):
@@ -411,39 +403,23 @@ c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1
 
 #----------
 
-saidaFracEvapo = driver.Create(pastaSaida+'fracaoEvaporativa.tif',colunas,linhas,1,GDT_Float32)
-if saidaFracEvapo is None:
-    print 'Erro ao criar o arquivo: ' + 'fracaoEvaporativa.tif'
-    sys.exit(1)
-saidaFracEvapo.SetProjection(projecao)
+saidaFracEvapo, bandaFracEvapo = criarImagem('fracaoEvaporativa')
 
-saidaFluxCalSensi = driver.Create(pastaSaida+'fluxoCalorSensivel.tif',colunas,linhas,1,GDT_Float32)
-if saidaFluxCalSensi is None:
-    print 'Erro ao criar o arquivo: ' + 'fluxoCalorSensivel.tif'
-    sys.exit(1)
-saidaFluxCalSensi.SetProjection(projecao)
+saidaFluxCalSensi, bandaFluxCalSensi = criarImagem('fluxoCalorSensivel')
 
-saidaFluxCalLaten = driver.Create(pastaSaida+'fluxoCalorLatente.tif',colunas,linhas,1,GDT_Float32)
-if saidaFluxCalLaten is None:
-    print 'Erro ao criar o arquivo: ' + 'fluxoCalorLatente.tif'
-    sys.exit(1)
-saidaFluxCalLaten.SetProjection(projecao)
+saidaFluxCalLaten, bandaFluxCalLaten = criarImagem('fluxoCalorLatente')
+
+saidaEvapoTrans24h, bandaEvapoTrans24h = criarImagem('evapotranspiracao24h')
 
 #----------
 
-bandaFracEvapo = saidaFracEvapo.GetRasterBand(1)
-bandaFluxCalSensi = saidaFluxCalSensi.GetRasterBand(1)
-bandaFluxCalLaten = saidaFluxCalLaten.GetRasterBand(1)
-
-#----------
-
-for i in range(0,linhas,yBlockSize):
+for i in xrange(0,linhas,yBlockSize):
     if i + yBlockSize < linhas:
         lerLinhas = yBlockSize
     else:
         lerLinhas = linhas - i
 
-    for j in range(0,colunas,xBlockSize):
+    for j in xrange(0,colunas,xBlockSize):
         if j + xBlockSize < colunas:
             lerColunas = xBlockSize
         else:
@@ -453,27 +429,25 @@ for i in range(0,linhas,yBlockSize):
 
         albedoSuperficie = bandaAlbedoSuper.ReadAsArray(j,i,lerColunas,lerLinhas)
         temperaturaSuperficie = bandaTempSuper.ReadAsArray(j,i,lerColunas,lerLinhas)
-        saldoRadiacao = bandaSaldoRad.ReadAsArray(j,i,lerColunas,lerLinhas)
 
         #----------
 
-        mask = saldoRadiacao != noValue
+        mask = albedoSuperficie != noValue
+
+        #----------
 
         fracaoEvaporativa = numpy.choose(mask, (noValue, (c1 + (m1 * albedoSuperficie) - temperaturaSuperficie)\
                                         / ((c1 - c2) + ((m1 - m2) * albedoSuperficie))))
         bandaFracEvapo.WriteArray(fracaoEvaporativa,j,i)
 
-        mask = None
-        albedoSuperficie = None
         temperaturaSuperficie = None
 
         #----------
 
+        saldoRadiacao = bandaSaldoRad.ReadAsArray(j,i,lerColunas,lerLinhas)
         fluxoCalSolo = bandaFluxoCalSolo.ReadAsArray(j,i,lerColunas,lerLinhas)
 
         #----------
-
-        mask = fluxoCalSolo != noValue
 
         fluxoCalorSensivel = numpy.choose(mask, (noValue, (1 - fracaoEvaporativa) * (saldoRadiacao - fluxoCalSolo)))
         bandaFluxCalSensi.WriteArray(fluxoCalorSensivel,j,i)
@@ -485,60 +459,41 @@ for i in range(0,linhas,yBlockSize):
         fluxoCalorLatente = numpy.choose(mask, (noValue, fracaoEvaporativa * (saldoRadiacao - fluxoCalSolo)))
         bandaFluxCalLaten.WriteArray(fluxoCalorLatente,j,i)
 
-        mask = None
-        fluxoCalorLatente = None
+        #----------
+
+        evapotranspiracao24h = numpy.choose(mask, (noValue, (fracaoEvaporativa * (Rg24h * (1.0 - albedoSuperficie)\
+                                                    - 110.0 * Tao24h) * 86.4) / 2450.0))
+        bandaEvapoTrans24h.WriteArray(evapotranspiracao24h,j,i)
 
         #----------
 
-        saldoRadiacao = None
-        fluxoCalSolo = None
+        mask = None
+        evapotranspiracao24h = None
+        fluxoCalorLatente = None
         fracaoEvaporativa = None
+        fluxoCalSolo = None
+        saldoRadiacao = None
+        albedoSuperficie = None
 
         #----------
 
 #----------
 
-bandaAlbedoSuper.SetNoDataValue(noValue)
-bandaAlbedoSuper = None
-saidaAlbedoSuper = None
+saidaAlbedoSuper, bandaAlbedoSuper = fecharImagem('albedoSuperficie',bandaAlbedoSuper)
 
-print 'Albedo Superficie - Pronto'
+saidaTempSuper, bandaTempSuper = fecharImagem('temperaturaSuperficie',bandaTempSuper)
 
-bandaTempSuper.SetNoDataValue(noValue)
-bandaTempSuper = None
-saidaTempSuper = None
+saidaSaldoRad, bandaSaldoRad = fecharImagem('saldoRadiacao',bandaSaldoRad)
 
-print 'Temperatura Superficie - Pronto'
+saidaFluxoCalSolo, bandaFluxoCalSolo = fecharImagem('fluxoCalSolo',bandaFluxoCalSolo)
 
-bandaSaldoRad.SetNoDataValue(noValue)
-bandaSaldoRad = None
-saidaSaldoRad = None
+saidaFracEvapo, bandaFracEvapo = fecharImagem('fracaoEvaporativa',bandaFracEvapo)
 
-print 'Saldo Radiação - Pronto'
+saidaFluxCalSensi, bandaFluxCalSensi = fecharImagem('fluxoCalorSensivel',bandaFluxCalSensi)
 
-bandaFluxoCalSolo.SetNoDataValue(noValue)
-bandaFluxoCalSolo = None
-saidaFluxoCalSolo = None
+saidaFluxCalLaten, bandaFluxCalLaten = fecharImagem('fluxoCalorLatente',bandaFluxCalLaten)
 
-print 'Fluxo Calor no Solo - Pronto'
-
-bandaFracEvapo.SetNoDataValue(noValue)
-bandaFracEvapo = None
-saidaFracEvapo = None
-
-print 'Fração Evaporativa - Pronto'
-
-bandaFluxCalSensi.SetNoDataValue(noValue)
-bandaFluxCalSensi = None
-saidaFluxCalSensi = None
-
-print 'Fluxo Calor Sensivel - Pronto'
-
-bandaFluxCalLaten.SetNoDataValue(noValue)
-bandaFluxCalLaten = None
-saidaFluxCalLaten = None
-
-print 'Fluxo Calor Latente - Pronto'
+saidaEvapoTrans24h, bandaEvapoTrans24h = fecharImagem('evapotranspiracao24h',bandaEvapoTrans24h)
 
 #----------
 
