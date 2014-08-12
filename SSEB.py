@@ -86,27 +86,16 @@ for k in xrange(1,NBandas+1):
     dados[k] = entrada.GetRasterBand(k).ReadAsArray().astype(numpy.float32)
     radiancia = descBandas[k][3] + (descBandas[k][6] * dados[k])
 
+    if (k == 2):
+        mask = dados[k-1] == dados[k]
+        dados[k-1] = None
+    elif(k > 2):
+        mask = valueOff == dados[k]
+
+    if(k != NBandas and k >= 2):
+        valueOff = numpy.choose(mask,(numpy.nan, dados[k]))
+
     if(k >= 2):
-        if(k == 2):
-            noDataValue = entrada.GetRasterBand(k-1).GetNoDataValue()
-
-            valueOff = dados[k-1][dados[k-1] == dados[k]]
-            valueOff = dados[k-1][valueOff != noDataValue][0]
-
-            if(valueOff.size > 0):
-                mask = numpy.logical_and(dados[k-1] != valueOff, dados[k-1] != noDataValue)
-            else:
-                mask = dados[k-1] != noDataValue
-
-            dados[k-1] = None
-
-        noDataValue = entrada.GetRasterBand(k).GetNoDataValue()
-
-        if(valueOff.size > 0):
-            mask = numpy.logical_and(mask, dados[k] != valueOff)
-
-        mask = numpy.logical_and(mask, dados[k] != noDataValue)
-
         dados[k] = None
 
     if(k != 6):
@@ -128,6 +117,11 @@ for k in xrange(1,NBandas+1):
 
 #----------
 
+mask = numpy.choose(mask,(True,False))
+
+#----------
+
+valueOff = None
 dados = None
 entrada = None
 
