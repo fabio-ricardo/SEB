@@ -14,11 +14,14 @@ class AbreImagem():
 			sys.exit(1)
 		self.pastaSaida = 'S-SEBI__'+nomeArquivoEntrada+'/'
 		try:
-			os.mkdir(pastaSaida)
+			os.mkdir(self.pastaSaida)
 		except:
-			print 'Diretorio: ' + pastaSaida + ' Já existe.'
+			print 'Diretorio: ' + self.pastaSaida + ' Já existe.'
 			print 'Recriando arquivos, se existir.'
 		print 'linhas:',self.getLinhas(),' colunas:',self.getColunas(),'bandas:',self.getBandas(),'driver:',self.getDriverEntrada().ShortName
+	
+	def getEntrada(self):
+		return self.entrada
 	
 	def getLinhas(self):
 		return self.entrada.RasterYSize
@@ -36,15 +39,15 @@ class AbreImagem():
 		return self.entrada.GetProjection()
 	
 	def saidaImagem(self,nome, calculo):
-		saida = driver.Create(self.pastaSaida+nome+self.extensao,self.getColunas(),self.getLinhas(),1,GDT_Float32)
+		saida = self.driver.Create(self.pastaSaida+nome+self.extensao,self.getColunas(),self.getLinhas(),1,GDT_Float32)
 		if saida is None:
 			print 'Erro ao criar o arquivo: ' + nome+self.extensao
 			sys.exit(1)
 
-		saida.SetProjection(projecao)
+		saida.SetProjection(self.getProjecao())
 		banda = saida.GetRasterBand(1)
 		banda.WriteArray(calculo,0,0)
-		banda.SetNoDataValue(noValue)
+		banda.SetNoDataValue(Valores.noValue)
 		banda = None
 		saida = None
 		print nome + ' - Pronto!'
@@ -52,35 +55,35 @@ class AbreImagem():
 	
 
 class Valores():
-	def __init__(self):
-		self.noValue = -9999.0
-		self.pi = math.pi
-		self.Z = 50.24
-		self.cosZ = math.cos((90 - self.Z) * self.pi / 180)
-		self.julianDay = 248.0
-		self.dr = 1.0 + 0.033 * math.cos((self.julianDay * 2 * self.pi) / 365)
-		self.ap = 0.03
-		self.Ta = 32.74
-		self.UR = 36.46
-		self.ea = (0.61078 * math.exp(17.269 * self.Ta / (237.3 + self.Ta))) * self.UR / 100.0
-		self.P = 99.3
-		self.W = 0.14 * self.ea * self.P + 2.1
-		self.Kt = 1.0
-		self.tsw = 0.35 + 0.627 * math.exp((-0.00146 * self.P / (self.Kt * self.cosZ)) - 0.075 * math.pow((self.W / self.cosZ), 0.4))
-		self.p2 = 1.0 / (self.tsw * self.tsw)
-		self.L = 0.1
-		self.K1 = 607.76
-		self.K2 = 1260.56
-		self.constSB = 5.67E-8
-		self.S = 1367.0
-		self.T0 = 273.15
-		self.Ea = 0.625 * math.pow((1000.0 * self.ea / (self.Ta + self.T0)), 0.131)
-		self.radOndaCurtaInci = (self.S * self.cosZ * self.cosZ) / (1.085 * self.cosZ + 10.0 * self.ea * (2.7 + self.cosZ) * 0.001 + 0.2)
-		self.radOndaLongaInci = self.Ea * self.constSB * math.pow(self.Ta + self.T0, 4)
-		self.G = 0.5
-		self.qtdPontos = 20
-		self.Rg24h = 243.95
-		self.Tao24h = 0.63
+
+	noValue = -9999.0
+	pi = math.pi
+	Z = 50.24
+	cosZ = math.cos((90 - Z) * pi / 180)
+	julianDay = 248.0
+	dr = 1.0 + 0.033 * math.cos((julianDay * 2 * pi) / 365)
+	ap = 0.03
+	Ta = 32.74
+	UR = 36.46
+	ea = (0.61078 * math.exp(17.269 * Ta / (237.3 + Ta))) * UR / 100.0
+	P = 99.3
+	W = 0.14 * ea * P + 2.1
+	Kt = 1.0
+	tsw = 0.35 + 0.627 * math.exp((-0.00146 * P / (Kt * cosZ)) - 0.075 * math.pow((W / cosZ), 0.4))
+	p2 = 1.0 / (tsw * tsw)
+	L = 0.1
+	K1 = 607.76
+	K2 = 1260.56
+	constSB = 5.67E-8
+	S = 1367.0
+	T0 = 273.15
+	Ea = 0.625 * math.pow((1000.0 * ea / (Ta + T0)), 0.131)
+	radOndaCurtaInci = (S * cosZ * cosZ) / (1.085 * cosZ + 10.0 * ea * (2.7 + cosZ) * 0.001 + 0.2)
+	radOndaLongaInci = Ea * constSB * math.pow(Ta + T0, 4)
+	G = 0.5
+	qtdPontos = 20
+	Rg24h = 243.95
+	Tao24h = 0.63
 
 	def setZ(self,z):
 		self.Z = z
@@ -103,11 +106,11 @@ class Formulas(Valores):
 			if (k != 6):
 				self.p1[k] = Valores.pi / (descBandas[k][5] * Valores.cosZ * Valores.dr)
 	
-	def reflectanciaParte2(self,NBandas):
+	def reflectanciaParte2(self,NBandas,entrada):
 		dados = numpy.empty([NBandas+1],dtype=numpy.ndarray)
 		self.albedoPlanetario = 0
 		for k in xrange(1,NBandas+1):
-			dados[k] = self.entrada.GetRasterBand(k).ReadAsArray().astype(numpy.float32)
+			dados[k] = entrada.GetRasterBand(k).ReadAsArray().astype(numpy.float32)
 			radiancia = descBandas[k][3] + (descBandas[k][6] * dados[k])
 
 			if (k == 2):
@@ -117,13 +120,13 @@ class Formulas(Valores):
 				self.mask = valueOff == dados[k]
 
 			if(k != NBandas and k >= 2):
-				valueOff = numpy.choose(mask,(numpy.nan, dados[k]))
+				valueOff = numpy.choose(self.mask,(numpy.nan, dados[k]))
 
 			if(k >= 2):
 				dados[k] = None
 
 			if(k != 6):
-				reflectancia = p1[k] * radiancia
+				reflectancia = self.p1[k] * radiancia
 
 				self.albedoPlanetario += descBandas[k][7] * reflectancia
 
@@ -138,10 +141,22 @@ class Formulas(Valores):
 			else:
 				self.radianciaB6 = radiancia
 				radiancia = None
-		self.mask = numpy.choose(mask,(True,False))
+		self.mask = numpy.choose(self.mask,(True,False))
 		valueOff = None
 		dados = None
 		self.entrada = None
+	
+	def fazCalculos(self):	
+		self.ndvi()
+		self.savi()
+		self.iaf()
+		self.albedoSuper()
+		self.enb_e_e0()
+		self.temperaturaSuperficie()
+		self.saldoRadiacao()
+		self.fluxoCalSolo()
+		self.fracaoEvaporativa()
+		self.passoFinal()
 	
 	def ndvi(self):
 		self.ndvi = numpy.choose(self.mask, (Valores.noValue, (self.reflectanciaB4 - self.reflectanciaB3) / (self.reflectanciaB4 + self.reflectanciaB3)))
@@ -199,18 +214,19 @@ class Formulas(Valores):
 		return self.temperaturaSuperficie
 	
 	def radOndaLongaEmi(self):
-		return (E0 * constSB) * numpy.power(temperaturaSuperficie,4)
+		return (self.E0 * Valores.constSB) * numpy.power(self.temperaturaSuperficie,4)
 		
 		
 	def saldoRadiacao(self):
 		self.saldoRadiacao = numpy.choose(self.mask, (Valores.noValue, ((1.0 - self.albedoSuperficie) * Valores.radOndaCurtaInci) +\
-                                    (E0 * Valores.radOndaLongaInci - this.radOndaLongaEmi())))
-        self.E0 = None  
+                                    (self.E0 * Valores.radOndaLongaInci - self.radOndaLongaEmi())))
+		
+		self.E0 = None  
   	
   	def getSaldoRadiacao(self):
 		return self.saldoRadiacao       
          
-    def fluxoCalSolo(self):
+	def fluxoCalSolo(self):
 		self.mask1 = self.ndvi < 0
 		self.fluxoCalSolo = numpy.choose(self.mask1, (((self.temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * self.albedoSuperficie))\
 							   * (1.0 - (0.98 * numpy.power(self.ndvi,4)))) * self.saldoRadiacao, Valores.G))
@@ -223,7 +239,6 @@ class Formulas(Valores):
 	
 	def fracaoEvaporativa(self):
 		albedoSupMax = numpy.amax(self.albedoSuperficie)
-
 		maskAlbedoSuper = numpy.logical_and(self.albedoSuperficie <= (albedoSupMax * 0.2), self.albedoSuperficie != Valores.noValue)
 		limiteLadoEsq = self.temperaturaSuperficie[maskAlbedoSuper]
 
@@ -231,7 +246,6 @@ class Formulas(Valores):
 		limiteLadoDir = self.temperaturaSuperficie[maskAlbedoSuper]
 
 		maskAlbedoSuper = None
-
 		self.mask1 = limiteLadoEsq != Valores.noValue
 		limiteLadoEsq = limiteLadoEsq[self.mask1]
 
@@ -251,15 +265,13 @@ class Formulas(Valores):
 
 		limiteLadoEsq = None
 		limiteLadoDir = None
-
 		#----------
 
-		limSupEsq = numpy.mean(limSupEsq)
-		limInfEsq = numpy.mean(limInfEsq)
-
-		limSupDir = numpy.mean(limSupDir)
-		limInfDir = numpy.mean(limInfDir)
-
+		limSupEsq = numpy.average(limSupEsq)
+		limInfEsq = numpy.average(limInfEsq)
+		limSupDir = numpy.average(limSupDir)
+		limInfDir = numpy.average(limInfDir)
+		
 		x1 = 0.1
 		x2 = albedoSupMax
 		x2x1 = x2 - x1
@@ -281,25 +293,44 @@ class Formulas(Valores):
 
 	def getFluxoCalorSensivel(self):
 		return numpy.choose(self.mask, (Valores.noValue, (1 - self.fracaoEvaporativa) * (self.saldoRadiacao - self.fluxoCalSolo)))
-		
-	def fluxoCalorLatente(self):		
-		fluxoCalorLatente = numpy.choose(mask, (noValue, fracaoEvaporativa * (saldoRadiacao - fluxoCalSolo)))
 	
-	def getFlucoCalorLatente(self):
-		return self.fluxoCalorLatente
+	def getFluxoCalorLatente(self):
+		return numpy.choose(self.mask, (Valores.noValue, self.fracaoEvaporativa * (self.saldoRadiacao - self.fluxoCalSolo)))
 		
+	def getEvapotranspiracao24h(self):
+		return numpy.choose(self.mask, (Valores.noValue, (self.fracaoEvaporativa * (Valores.Rg24h * (1.0 - self.albedoSuperficie)\
+                                                    - 110.0 * Valores.Tao24h) * 86.4) / 2450.0))
+	def passoFinal(self):
+		self.mask = None
+		self.evapotranspiracao24h = None
+		self.fluxoCalorLatente = None
+		self.fracaoEvaporativa = None
+		self.fluxoCalSolo = None
+		self.saldoRadiacao = None
+		self.albedoSuperficie = None
+
 if __name__== '__main__': 
-	img = AbreImagem('empilhada1000x1000.tif')
+	inicio = time.time()
+	
+	img = AbreImagem('empilhada2000x2000.tif')
 	formulas = Formulas()
-	formulas.reflectanciaParte1()
-	formulas.reflectanciaParte2()
+	formulas.reflectanciaParte1(img.getBandas())
+	formulas.reflectanciaParte2(img.getBandas(),img.getEntrada())
+	formulas.fazCalculos()
 	img.saidaImagem('ndvi',formulas.getNDVI())
 	img.saidaImagem('savi',formulas.getSAVI())
 	img.saidaImagem('iaf',formulas.getIAF())
 	img.saidaImagem('albedoSuperficie',formulas.getAlbedoSuper())
-	formulas.enb_e_e0()
 	img.saidaImagem('temperaturaSuperficie',formulas.getTemperaturaSuperficie())
 	img.saidaImagem('saldoRadiacao',formulas.getSaldoRadiacao())
 	img.saidaImagem('fluxoCalSolo',formulas.getFluxoCalSolo())
 	img.saidaImagem('fracaoEvaporativa',formulas.getFracaoEvaporativa())
 	img.saidaImagem('fluxoCalorSensivel',formulas.getFluxoCalorSensivel())
+	img.saidaImagem('fluxoCalorLatente',formulas.getFluxoCalorLatente())
+	img.saidaImagem('evapotranspiracao24h',formulas.getEvapotranspiracao24h())
+	img.passoFinal()
+	img = None
+	formulas = None
+	fim = time.time()
+
+	print 'Tempo total: '+str(fim - inicio)+' segundos.'
