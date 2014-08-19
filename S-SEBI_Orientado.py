@@ -43,7 +43,6 @@ class AbreImagem():
 		if saida is None:
 			print 'Erro ao criar o arquivo: ' + nome+self.extensao
 			sys.exit(1)
-
 		saida.SetProjection(self.getProjecao())
 		banda = saida.GetRasterBand(1)
 		banda.WriteArray(calculo,0,0)
@@ -156,7 +155,7 @@ class Formulas(Valores):
 		self.saldoRadiacao()
 		self.fluxoCalSolo()
 		self.fracaoEvaporativa()
-		self.passoFinal()
+		
 	
 	def ndvi(self):
 		self.ndvi = numpy.choose(self.mask, (Valores.noValue, (self.reflectanciaB4 - self.reflectanciaB3) / (self.reflectanciaB4 + self.reflectanciaB3)))
@@ -202,8 +201,6 @@ class Formulas(Valores):
 		self.ENB = numpy.choose(self.mask1, (self.ENB, 0.99))
 		self.E0 = numpy.choose(self.mask1, (self.E0, 0.985))
 		self.mask1 = None
-		self.savi = None
-		self.iaf = None
 	
 	def temperaturaSuperficie(self):
 		self.temperaturaSuperficie = numpy.choose(self.mask, (Valores.noValue, Valores.K2 / numpy.log(((self.ENB * Valores.K1) / self.radianciaB6) + 1.0)))
@@ -232,7 +229,6 @@ class Formulas(Valores):
 							   * (1.0 - (0.98 * numpy.power(self.ndvi,4)))) * self.saldoRadiacao, Valores.G))
 		self.mask1 = None
 		self.fluxoCalSolo = numpy.choose(self.mask, (Valores.noValue, self.fluxoCalSolo))
-		self.ndvi = None
 		
 	def getFluxoCalSolo(self):
 		return self.fluxoCalSolo
@@ -286,7 +282,7 @@ class Formulas(Valores):
 
 		self.fracaoEvaporativa = numpy.choose(self.mask, (Valores.noValue, (c1 + (m1 * self.albedoSuperficie) - self.temperaturaSuperficie)\
 												/ ((c1 - c2) + ((m1 - m2) * self.albedoSuperficie))))
-		self.temperaturaSuperficie = None
+
 
 	def getFracaoEvaporativa(self):
 		return self.fracaoEvaporativa
@@ -301,6 +297,7 @@ class Formulas(Valores):
 		return numpy.choose(self.mask, (Valores.noValue, (self.fracaoEvaporativa * (Valores.Rg24h * (1.0 - self.albedoSuperficie)\
                                                     - 110.0 * Valores.Tao24h) * 86.4) / 2450.0))
 	def passoFinal(self):
+		self.temperaturaSuperficie = None
 		self.mask = None
 		self.evapotranspiracao24h = None
 		self.fluxoCalorLatente = None
@@ -308,11 +305,14 @@ class Formulas(Valores):
 		self.fluxoCalSolo = None
 		self.saldoRadiacao = None
 		self.albedoSuperficie = None
+		self.ndvi = None
+		self.savi = None
+		self.iaf = None
 
 if __name__== '__main__': 
 	inicio = time.time()
 	
-	img = AbreImagem('empilhada2000x2000.tif')
+	img = AbreImagem('empilhada7001x8001.tif')
 	formulas = Formulas()
 	formulas.reflectanciaParte1(img.getBandas())
 	formulas.reflectanciaParte2(img.getBandas(),img.getEntrada())
@@ -328,7 +328,7 @@ if __name__== '__main__':
 	img.saidaImagem('fluxoCalorSensivel',formulas.getFluxoCalorSensivel())
 	img.saidaImagem('fluxoCalorLatente',formulas.getFluxoCalorLatente())
 	img.saidaImagem('evapotranspiracao24h',formulas.getEvapotranspiracao24h())
-	img.passoFinal()
+	formulas.passoFinal()
 	img = None
 	formulas = None
 	fim = time.time()
