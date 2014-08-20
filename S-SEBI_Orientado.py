@@ -154,7 +154,7 @@ class Formulas(Valores):
 		self.temperaturaSuperficie()
 		self.saldoRadiacao()
 		self.fluxoCalSolo()
-		self.fracaoEvaporativa()
+		self.fracaoEvaporativaSSEBI()
 		
 	
 	def ndvi(self):
@@ -233,7 +233,103 @@ class Formulas(Valores):
 	def getFluxoCalSolo(self):
 		return self.fluxoCalSolo
 	
-	def fracaoEvaporativa(self):
+	def fracaoEvaporativaSSEB(self):
+		self.mask = numpy.choose(self.mask,(True,False))
+		hotNdvi = numpy.array([],dtype=numpy.float32)
+		coldTemp = numpy.array([],dtype=numpy.float32)
+
+		coldNdvi = numpy.array([],dtype=numpy.float32)
+		hotTemp = numpy.array([],dtype=numpy.float32)
+
+		tempSuperficie = self.temperaturaSuperficie
+
+		tempSuperficie.reshape(-1)
+		ndvi_aux = self.ndvi
+		ndvi_aux.reshape(-1)
+
+		tempSuperficie = tempSuperficie[self.mask]
+		ndvi_aux = ndvi_aux[self.mask]
+
+		for i in xrange(Valores.qtdPontos):
+			if hotNdvi.size < Valores.qtdPontos:
+				tempNdviIgual = numpy.array([])
+
+				hotNdvi = numpy.append(hotNdvi,ndvi_aux[numpy.nanargmax(ndvi_aux)])
+				tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[numpy.nanargmax(ndvi_aux)])
+				ndvi_aux[numpy.nanargmax(ndvi_aux)] = numpy.nan
+
+				prox = numpy.nanargmax(ndvi_aux)
+				posUlt = hotNdvi.size-1
+
+				while hotNdvi[posUlt] == ndvi_aux[prox]:
+					tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[prox])
+
+					ndvi_aux[prox] = numpy.nan
+					prox = numpy.nanargmax(ndvi_aux)
+
+				if tempNdviIgual.size > 1:
+					tempNdviIgual = numpy.sort(tempNdviIgual)
+
+					tamTempNdviIg = tempNdviIgual.size
+					if tamTempNdviIg > (Valores.qtdPontos - posUlt):
+						tamTempNdviIg = Valores.qtdPontos - posUlt
+
+					coldTemp = numpy.append(coldTemp,tempNdviIgual[:tamTempNdviIg])
+
+					for j in xrange(tamTempNdviIg-1):
+						hotNdvi = numpy.append(hotNdvi,hotNdvi[posUlt])
+
+				else:
+					coldTemp = numpy.append(coldTemp,tempNdviIgual[0])
+
+				tempNdviIgual = None
+
+			if coldNdvi.size < Valores.qtdPontos:
+				tempNdviIgual = numpy.array([])
+
+				coldNdvi = numpy.append(coldNdvi,ndvi_aux[numpy.nanargmin(ndvi_aux)])
+				tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[numpy.nanargmin(ndvi_aux)])
+				ndvi_aux[numpy.nanargmin(ndvi_aux)] = numpy.nan
+
+				prox = numpy.nanargmin(ndvi_aux)
+				posUlt = coldNdvi.size-1
+
+				while coldNdvi[posUlt] == ndvi_aux[prox]:
+					tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[prox])
+
+					ndvi_aux[prox] = numpy.nan
+					prox = numpy.nanargmin(ndvi_aux)
+
+				if tempNdviIgual.size > 1:
+					tempNdviIgual = numpy.sort(tempNdviIgual)[::-1]
+
+					tamTempNdviIg = tempNdviIgual.size
+					if tamTempNdviIg > (Valores.qtdPontos - posUlt):
+						tamTempNdviIg = Valores.qtdPontos - posUlt
+
+					hotTemp = numpy.append(hotTemp,tempNdviIgual[:tamTempNdviIg])
+
+					for j in xrange(tamTempNdviIg-1):
+						coldNdvi = numpy.append(coldNdvi,coldNdvi[posUlt])
+
+				else:
+					hotTemp = numpy.append(hotTemp,tempNdviIgual[0])
+
+				tempNdviIgual = None
+
+		ndvi_aux = None
+		tempSuperficie = None
+
+		#----------
+
+		TH = numpy.mean(hotTemp)
+		TC = numpy.mean(coldTemp)
+
+		#----------
+
+		self.fracaoEvaporativa = numpy.choose(self.mask, (Valores.noValue, (TH - self.temperaturaSuperficie) / (TH - TC)))
+	
+	def fracaoEvaporativaSSEBI(self):
 		albedoSupMax = numpy.amax(self.albedoSuperficie)
 		maskAlbedoSuper = numpy.logical_and(self.albedoSuperficie <= (albedoSupMax * 0.2), self.albedoSuperficie != Valores.noValue)
 		limiteLadoEsq = self.temperaturaSuperficie[maskAlbedoSuper]
@@ -312,7 +408,7 @@ class Formulas(Valores):
 if __name__== '__main__': 
 	inicio = time.time()
 	
-	img = AbreImagem('empilhada7001x8001.tif')
+	img = AbreImagem('empilhada2000x2000.tif')
 	formulas = Formulas()
 	formulas.reflectanciaParte1(img.getBandas())
 	formulas.reflectanciaParte2(img.getBandas(),img.getEntrada())
@@ -324,7 +420,7 @@ if __name__== '__main__':
 	img.saidaImagem('temperaturaSuperficie',formulas.getTemperaturaSuperficie())
 	img.saidaImagem('saldoRadiacao',formulas.getSaldoRadiacao())
 	img.saidaImagem('fluxoCalSolo',formulas.getFluxoCalSolo())
-	img.saidaImagem('fracaoEvaporativa',formulas.getFracaoEvaporativa())
+	img.saidaImagem('fracaoEvaporativa',formulas.getfracaoEvaporativa())
 	img.saidaImagem('fluxoCalorSensivel',formulas.getFluxoCalorSensivel())
 	img.saidaImagem('fluxoCalorLatente',formulas.getFluxoCalorLatente())
 	img.saidaImagem('evapotranspiracao24h',formulas.getEvapotranspiracao24h())
