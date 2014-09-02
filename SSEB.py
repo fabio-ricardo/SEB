@@ -8,7 +8,7 @@ inicio = time.time()
 driver = gdal.GetDriverByName('GTiff')
 driver.Register()
 
-nomeArquivoEntrada = 'empilhada.tif'
+nomeArquivoEntrada = 'cambarazal.tif'
 
 entrada = gdal.Open(nomeArquivoEntrada,GA_ReadOnly)
 if  entrada is None:
