@@ -29,15 +29,15 @@ extensao = '.tif'
 
 noValue = -9999.0
 pi = math.pi
-Z = 50.24
+Z = 40.647
 cosZ = math.cos((90 - Z) * pi / 180)
-julianDay = 248.0
+julianDay = 205.0
 dr = 1.0 + 0.033 * math.cos((julianDay * 2 * pi) / 365)
 ap = 0.03
-Ta = 32.74
-UR = 36.46
+Ta = 25.27
+UR = 67.98
 ea = (0.61078 * math.exp(17.269 * Ta / (237.3 + Ta))) * UR / 100.0
-P = 99.3
+P = 99.9
 W = 0.14 * ea * P + 2.1
 Kt = 1.0
 tsw = 0.35 + 0.627 * math.exp((-0.00146 * P / (Kt * cosZ)) - 0.075 * math.pow((W / cosZ), 0.4))
@@ -52,9 +52,9 @@ Ea = 0.625 * math.pow((1000.0 * ea / (Ta + T0)), 0.131)
 radOndaCurtaInci = (S * cosZ * cosZ) / (1.085 * cosZ + 10.0 * ea * (2.7 + cosZ) * 0.001 + 0.2)
 radOndaLongaInci = Ea * constSB * math.pow(Ta + T0, 4)
 G = 0.5
-qtdPontos = 3
-Rg24h = 243.95
-Tao24h = 0.63
+qtdPontos = 100
+Rg24h = 183.8756158
+Tao24h = 0.575066923
 
 p1 = numpy.zeros([NBandas+1],dtype=numpy.float32)
 
@@ -239,7 +239,7 @@ radOndaLongaEmi = None
 mask1 = ndvi < 0
 
 fluxoCalSolo = numpy.choose(mask1, (((temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * albedoSuperficie))\
-                       * (1.0 - (0.98 * numpy.power(ndvi,4)))) * saldoRadiacao, G))
+                       * (1.0 - (0.98 * numpy.power(ndvi,4)))) * saldoRadiacao, G*saldoRadiacao))
 
 mask1 = None
 
@@ -334,9 +334,18 @@ ndvi = None
 tempSuperficie = None
 
 #----------
+hotTemp = numpy.sort(hotTemp)
+coldTemp = numpy.sort(coldTemp)
 
-TH = numpy.mean(hotTemp)
-TC = numpy.mean(coldTemp)
+TH = numpy.mean(hotTemp[-3:])
+TC = numpy.mean(coldTemp[:3])
+
+'''print 'hotNdvi:',hotNdvi
+print 'coldNdvi:',coldNdvi
+print 'hotTemp:',hotTemp
+print 'coldTemp:',coldTemp
+print 'TH:'+str(TH)
+print 'TC:'+str(TC)'''
 
 #----------
 
