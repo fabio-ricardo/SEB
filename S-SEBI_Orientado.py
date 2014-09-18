@@ -3,8 +3,8 @@ import gdal, osgeo, time, numpy, sys, math, os
 from gdalconst import *
 from constantes import *
 
+#Pega os dados da imagem
 class AbreImagem():
-	
 	def __init__(self,nomeArquivoEntrada, algNome):
 		self.driver = gdal.GetDriverByName('GTiff')
 		self.driver.Register()
@@ -55,7 +55,7 @@ class AbreImagem():
 		print nome + ' - Pronto!'
 		
 	
-
+#Valores a serem usados
 class Valores():
 
 	noValue = -9999.0
@@ -99,12 +99,14 @@ class Valores():
 	def setUR(self,ur):
 		self.UR = ur
 
+#Salva as imagens obtidas pelos cálculos
 class SalvaImagens():
 	def __init__(self, nome, algNome,codigo):
 		img = AbreImagem(nome, algNome)
 		formulas = Formulas()
 		formulas.reflectanciaParte1(img.getBandas())
 		formulas.reflectanciaParte2(img.getBandas(),img.getEntrada())
+		
 		formulas.fazCalculos(codigo)
 			
 		img.saidaImagem('ndvi',formulas.getNDVI())
@@ -123,7 +125,7 @@ class SalvaImagens():
 		formulas = None
 	
 
-			
+#No terceiro parâmetro, passa-se a nova forma de calcular a fração evaporativa	
 class SSEBI():
 	def __init__(self,nome):
 		a = SalvaImagens(nome, 'S-SEBI','\
@@ -159,7 +161,7 @@ c1 = ((x2 * limSupEsq) - (x1 * limSupDir)) / x2x1\n\
 c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1\n\
 self.fracaoEvaporativa = numpy.choose(self.mask, (Valores.noValue, (c1 + (m1 * self.albedoSuperficie) - self.temperaturaSuperficie)/((c1 - c2) + ((m1 - m2) * self.albedoSuperficie))))\n')
 
-
+#Idem ao SSEBI
 class SSEB():
 	def __init__(self,nome):
 		a = SalvaImagens(nome, 'SSEB','\
@@ -226,7 +228,7 @@ TH = numpy.mean(hotTemp[-3:])\n\
 TC = numpy.mean(coldTemp[:3])\n\
 self.fracaoEvaporativa = numpy.choose(self.mask, (Valores.noValue, (TH - self.temperaturaSuperficie) / (TH - TC)))\n')
 	
-
+#Todas as fórmulas utilizadas
 class Formulas(Valores):
 	
 	def reflectanciaParte1(self,NBandas):
@@ -389,6 +391,7 @@ class Formulas(Valores):
 
 if __name__== '__main__': 
 	inicio = time.time()
+	#Instancia-se o algoritmo desejado e passa o nome da imagem como parâmetro
 	a = SSEBI('empilhada1000x1000.tif')
 	fim = time.time()
 	print 'Tempo total: '+str(fim - inicio)+' segundos.'
