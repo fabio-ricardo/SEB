@@ -5,7 +5,7 @@ from constantes import *
 
 class AbreImagem():
 	
-	def __init__(self,nomeArquivoEntrada):
+	def __init__(self,nomeArquivoEntrada,opcao):
 		self.driver = gdal.GetDriverByName('GTiff')
 		self.driver.Register()
 		self.extensao = '.tif'
@@ -13,7 +13,11 @@ class AbreImagem():
 		if  self.entrada is None:
 			print 'Erro ao abrir o arquivo: ' + nomeArquivoEntrada
 			sys.exit(1)
-		self.pastaSaida = 'S-SEBI__'+nomeArquivoEntrada+'/'
+		
+		if opcao ==1:
+			self.pastaSaida = 'S-SEBI__'+nomeArquivoEntrada+'/'
+		else:
+			self.pastaSaida = 'SSEB__'+nomeArquivoEntrada+'/'
 		try:
 			os.mkdir(self.pastaSaida)
 		except:
@@ -226,7 +230,7 @@ class Formulas(Valores):
 	def fluxoCalSolo(self):
 		self.mask1 = self.ndvi < 0
 		self.fluxoCalSolo = numpy.choose(self.mask1, (((self.temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * self.albedoSuperficie))\
-							   * (1.0 - (0.98 * numpy.power(self.ndvi,4)))) * self.saldoRadiacao, Valores.G))
+							   * (1.0 - (0.98 * numpy.power(self.ndvi,4)))) * self.saldoRadiacao, Valores.G * self.saldoRadiacao))
 		self.mask1 = None
 		self.fluxoCalSolo = numpy.choose(self.mask, (Valores.noValue, self.fluxoCalSolo))
 		
@@ -234,17 +238,16 @@ class Formulas(Valores):
 		return self.fluxoCalSolo
 	
 	def fracaoEvaporativaSSEB(self):
-		self.mask = numpy.choose(self.mask,(True,False))
 		hotNdvi = numpy.array([],dtype=numpy.float32)
 		coldTemp = numpy.array([],dtype=numpy.float32)
 
 		coldNdvi = numpy.array([],dtype=numpy.float32)
 		hotTemp = numpy.array([],dtype=numpy.float32)
-		
-		tempSuperficie = self.temperaturaSuperficie
+
+		tempSuperficie = self.getTemperaturaSuperficie()
 
 		tempSuperficie.reshape(-1)
-		ndvi_aux = self.ndvi
+		ndvi_aux = self.getNDVI()
 		ndvi_aux.reshape(-1)
 
 		tempSuperficie = tempSuperficie[self.mask]
@@ -253,9 +256,9 @@ class Formulas(Valores):
 		for i in xrange(Valores.qtdPontos):
 			if hotNdvi.size < Valores.qtdPontos:
 				tempNdviIgual = numpy.array([])
+
 				hotNdvi = numpy.append(hotNdvi,ndvi_aux[numpy.nanargmax(ndvi_aux)])
 				tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[numpy.nanargmax(ndvi_aux)])
-				
 				ndvi_aux[numpy.nanargmax(ndvi_aux)] = numpy.nan
 
 				prox = numpy.nanargmax(ndvi_aux)
@@ -321,11 +324,11 @@ class Formulas(Valores):
 		tempSuperficie = None
 
 		#----------
+		hotTemp = numpy.sort(hotTemp)
+		coldTemp = numpy.sort(coldTemp)
 
-		TH = numpy.mean(hotTemp)
-		TC = numpy.mean(coldTemp)
-
-		#----------
+		TH = numpy.mean(hotTemp[-3:])
+		TC = numpy.mean(coldTemp[:3])
 
 		self.fracaoEvaporativa = numpy.choose(self.mask, (Valores.noValue, (TH - self.temperaturaSuperficie) / (TH - TC)))
 	
@@ -406,48 +409,48 @@ class Formulas(Valores):
 		self.iaf = None
 
 class SalvaImagens():
-	def __init__(self, nome):
-		self.img = AbreImagem(nome)
-		self.formulas = Formulas()
+	def __init__(self, nome, opcao):
+		img = AbreImagem(nome, opcao)
+		formulas = Formulas()
+		formulas.reflectanciaParte1(img.getBandas())
+		formulas.reflectanciaParte2(img.getBandas(),img.getEntrada())
+		formulas.fazCalculos()
 		
-	def parte1(self):
-		self.formulas.reflectanciaParte1(self.img.getBandas())
-		self.formulas.reflectanciaParte2(self.img.getBandas(),self.img.getEntrada())
-		self.formulas.fazCalculos()
-	
-	def parte2(self):
-		self.img.saidaImagem('ndvi',self.formulas.getNDVI())
-		self.img.saidaImagem('savi',self.formulas.getSAVI())
-		self.img.saidaImagem('iaf',self.formulas.getIAF())
-		self.img.saidaImagem('albedoSuperficie',self.formulas.getAlbedoSuper())
-		self.img.saidaImagem('temperaturaSuperficie',self.formulas.getTemperaturaSuperficie())
-		self.img.saidaImagem('saldoRadiacao',self.formulas.getSaldoRadiacao())
-		self.img.saidaImagem('fluxoCalSolo',self.formulas.getFluxoCalSolo())
-		self.img.saidaImagem('fracaoEvaporativa',self.formulas.getFracaoEvaporativa())
-		self.img.saidaImagem('fluxoCalorSensivel',self.formulas.getFluxoCalorSensivel())
-		self.img.saidaImagem('fluxoCalorLatente',self.formulas.getFluxoCalorLatente())
-		self.img.saidaImagem('evapotranspiracao24h',self.formulas.getEvapotranspiracao24h())
-		self.formulas.passoFinal()
-		self.img = None
-		self.formulas = None
+		if opcao == 1:
+			formulas.fracaoEvaporativaSSEBI()
+		else:
+			formulas.fracaoEvaporativaSSEB()
+			
+		img.saidaImagem('ndvi',formulas.getNDVI())
+		img.saidaImagem('savi',formulas.getSAVI())
+		img.saidaImagem('iaf',formulas.getIAF())
+		img.saidaImagem('albedoSuperficie',formulas.getAlbedoSuper())
+		img.saidaImagem('temperaturaSuperficie',formulas.getTemperaturaSuperficie())
+		img.saidaImagem('saldoRadiacao',formulas.getSaldoRadiacao())
+		img.saidaImagem('fluxoCalSolo',formulas.getFluxoCalSolo())
+		img.saidaImagem('fracaoEvaporativa',formulas.getFracaoEvaporativa())
+		img.saidaImagem('fluxoCalorSensivel',formulas.getFluxoCalorSensivel())
+		img.saidaImagem('fluxoCalorLatente',formulas.getFluxoCalorLatente())
+		img.saidaImagem('evapotranspiracao24h',formulas.getEvapotranspiracao24h())
+		formulas.passoFinal()
+		img = None
+		formulas = None
 	
 class SSEBI():
 	def __init__(self,nome):
-		a = SalvaImagens(nome)
-		a.parte1()
-		formulas.fracaoEvaporativaSSEBI()
-		a.parte2()
+		a = SalvaImagens(nome, 1)
 
 class SSEB():
 	def __init__(self,nome):
-		a = SalvaImagens(nome)
-		a.parte1()
-		formulas.fracaoEvaporativaSSEB()
-		a.parte2()
+		a = SalvaImagens(nome, 2)
 
 if __name__== '__main__': 
 	inicio = time.time()
 	a = SSEBI('empilhada1000x1000.tif')
 	fim = time.time()
-
+	print 'Tempo total: '+str(fim - inicio)+' segundos.'
+	
+	inicio = time.time()
+	a = SSEB('empilhada1000x1000.tif')
+	fim = time.time()
 	print 'Tempo total: '+str(fim - inicio)+' segundos.'
