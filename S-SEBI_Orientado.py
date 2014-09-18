@@ -5,7 +5,7 @@ from constantes import *
 
 class AbreImagem():
 	
-	def __init__(self,nomeArquivoEntrada,opcao):
+	def __init__(self,nomeArquivoEntrada, algNome):
 		self.driver = gdal.GetDriverByName('GTiff')
 		self.driver.Register()
 		self.extensao = '.tif'
@@ -14,10 +14,8 @@ class AbreImagem():
 			print 'Erro ao abrir o arquivo: ' + nomeArquivoEntrada
 			sys.exit(1)
 		
-		if opcao ==1:
-			self.pastaSaida = 'S-SEBI__'+nomeArquivoEntrada+'/'
-		else:
-			self.pastaSaida = 'SSEB__'+nomeArquivoEntrada+'/'
+		self.pastaSaida = algNome+'__'+nomeArquivoEntrada+'/'
+		
 		try:
 			os.mkdir(self.pastaSaida)
 		except:
@@ -100,7 +98,134 @@ class Valores():
 		
 	def setUR(self,ur):
 		self.UR = ur
-		
+
+class SalvaImagens():
+	def __init__(self, nome, algNome,codigo):
+		img = AbreImagem(nome, algNome)
+		formulas = Formulas()
+		formulas.reflectanciaParte1(img.getBandas())
+		formulas.reflectanciaParte2(img.getBandas(),img.getEntrada())
+		formulas.fazCalculos(codigo)
+			
+		img.saidaImagem('ndvi',formulas.getNDVI())
+		img.saidaImagem('savi',formulas.getSAVI())
+		img.saidaImagem('iaf',formulas.getIAF())
+		img.saidaImagem('albedoSuperficie',formulas.getAlbedoSuper())
+		img.saidaImagem('temperaturaSuperficie',formulas.getTemperaturaSuperficie())
+		img.saidaImagem('saldoRadiacao',formulas.getSaldoRadiacao())
+		img.saidaImagem('fluxoCalSolo',formulas.getFluxoCalSolo())
+		img.saidaImagem('fracaoEvaporativa',formulas.getFracaoEvaporativa())
+		img.saidaImagem('fluxoCalorSensivel',formulas.getFluxoCalorSensivel())
+		img.saidaImagem('fluxoCalorLatente',formulas.getFluxoCalorLatente())
+		img.saidaImagem('evapotranspiracao24h',formulas.getEvapotranspiracao24h())
+		formulas.passoFinal()
+		img = None
+		formulas = None
+	
+
+			
+class SSEBI():
+	def __init__(self,nome):
+		a = SalvaImagens(nome, 'S-SEBI','\
+albedoSupMax = numpy.amax(self.albedoSuperficie)\n\
+maskAlbedoSuper = numpy.logical_and(self.albedoSuperficie <= (albedoSupMax * 0.2), self.albedoSuperficie != Valores.noValue)\n\
+limiteLadoEsq = self.temperaturaSuperficie[maskAlbedoSuper]\n\
+maskAlbedoSuper = self.albedoSuperficie >= (albedoSupMax * 0.8)\n\
+limiteLadoDir = self.temperaturaSuperficie[maskAlbedoSuper]\n\
+maskAlbedoSuper = None\n\
+self.mask1 = limiteLadoEsq != Valores.noValue\n\
+limiteLadoEsq = limiteLadoEsq[self.mask1]\n\
+self.mask1 = limiteLadoDir != Valores.noValue\n\
+limiteLadoDir = limiteLadoDir[self.mask1]\n\
+self.mask1 = None\n\
+limiteLadoEsq = numpy.sort(limiteLadoEsq)\n\
+limiteLadoDir = numpy.sort(limiteLadoDir)\n\
+limSupEsq = limiteLadoEsq[::-1][0:Valores.qtdPontos]\n\
+limInfEsq = limiteLadoEsq[0:Valores.qtdPontos]\n\
+limSupDir = limiteLadoDir[::-1][0:Valores.qtdPontos]\n\
+limInfDir = limiteLadoDir[0:Valores.qtdPontos]\n\
+limiteLadoEsq = None\n\
+limiteLadoDir = None\n\
+limSupEsq = numpy.average(limSupEsq)\n\
+limInfEsq = numpy.average(limInfEsq)\n\
+limSupDir = numpy.average(limSupDir)\n\
+limInfDir = numpy.average(limInfDir)\n\
+x1 = 0.1\n\
+x2 = albedoSupMax\n\
+x2x1 = x2 - x1\n\
+m1 = (limSupDir - limSupEsq) / x2x1\n\
+m2 = (limInfDir - limInfEsq) / x2x1\n\
+c1 = ((x2 * limSupEsq) - (x1 * limSupDir)) / x2x1\n\
+c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1\n\
+self.fracaoEvaporativa = numpy.choose(self.mask, (Valores.noValue, (c1 + (m1 * self.albedoSuperficie) - self.temperaturaSuperficie)/((c1 - c2) + ((m1 - m2) * self.albedoSuperficie))))\n')
+
+
+class SSEB():
+	def __init__(self,nome):
+		a = SalvaImagens(nome, 'SSEB','\
+hotNdvi = numpy.array([],dtype=numpy.float32)\n\
+coldTemp = numpy.array([],dtype=numpy.float32)\n\
+coldNdvi = numpy.array([],dtype=numpy.float32)\n\
+hotTemp = numpy.array([],dtype=numpy.float32)\n\
+tempSuperficie = self.getTemperaturaSuperficie()\n\
+tempSuperficie.reshape(-1)\n\
+ndvi_aux = self.getNDVI()\n\
+ndvi_aux.reshape(-1)\n\
+tempSuperficie = tempSuperficie[self.mask]\n\
+ndvi_aux = ndvi_aux[self.mask]\n\
+for i in xrange(Valores.qtdPontos):\n\
+	if hotNdvi.size < Valores.qtdPontos:\n\
+		tempNdviIgual = numpy.array([])\n\
+		hotNdvi = numpy.append(hotNdvi,ndvi_aux[numpy.nanargmax(ndvi_aux)])\n\
+		tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[numpy.nanargmax(ndvi_aux)])\n\
+		ndvi_aux[numpy.nanargmax(ndvi_aux)] = numpy.nan\n\
+		prox = numpy.nanargmax(ndvi_aux)\n\
+		posUlt = hotNdvi.size-1\n\
+		while hotNdvi[posUlt] == ndvi_aux[prox]:\n\
+			tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[prox])\n\
+			ndvi_aux[prox] = numpy.nan\n\
+			prox = numpy.nanargmax(ndvi_aux)\n\
+		if tempNdviIgual.size > 1:\n\
+			tempNdviIgual = numpy.sort(tempNdviIgual)\n\
+			tamTempNdviIg = tempNdviIgual.size\n\
+			if tamTempNdviIg > (Valores.qtdPontos - posUlt):\n\
+				tamTempNdviIg = Valores.qtdPontos - posUlt\n\
+			coldTemp = numpy.append(coldTemp,tempNdviIgual[:tamTempNdviIg])\n\
+			for j in xrange(tamTempNdviIg-1):\n\
+				hotNdvi = numpy.append(hotNdvi,hotNdvi[posUlt])\n\
+		else:\n\
+			coldTemp = numpy.append(coldTemp,tempNdviIgual[0])\n\
+		tempNdviIgual = None\n\
+	if coldNdvi.size < Valores.qtdPontos:\n\
+		tempNdviIgual = numpy.array([])\n\
+		coldNdvi = numpy.append(coldNdvi,ndvi_aux[numpy.nanargmin(ndvi_aux)])\n\
+		tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[numpy.nanargmin(ndvi_aux)])\n\
+		ndvi_aux[numpy.nanargmin(ndvi_aux)] = numpy.nan\n\
+		prox = numpy.nanargmin(ndvi_aux)\n\
+		posUlt = coldNdvi.size-1\n\
+		while coldNdvi[posUlt] == ndvi_aux[prox]:\n\
+			tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[prox])\n\
+			ndvi_aux[prox] = numpy.nan\n\
+			prox = numpy.nanargmin(ndvi_aux)\n\
+		if tempNdviIgual.size > 1:\n\
+			tempNdviIgual = numpy.sort(tempNdviIgual)[::-1]\n\
+			tamTempNdviIg = tempNdviIgual.size\n\
+			if tamTempNdviIg > (Valores.qtdPontos - posUlt):\n\
+				tamTempNdviIg = Valores.qtdPontos - posUlt\n\
+			hotTemp = numpy.append(hotTemp,tempNdviIgual[:tamTempNdviIg])\n\
+			for j in xrange(tamTempNdviIg-1):\n\
+				coldNdvi = numpy.append(coldNdvi,coldNdvi[posUlt])\n\
+		else:\n\
+			hotTemp = numpy.append(hotTemp,tempNdviIgual[0])\n\
+		tempNdviIgual = None\n\
+ndvi_aux = None\n\
+tempSuperficie = None\n\
+hotTemp = numpy.sort(hotTemp)\n\
+coldTemp = numpy.sort(coldTemp)\n\
+TH = numpy.mean(hotTemp[-3:])\n\
+TC = numpy.mean(coldTemp[:3])\n\
+self.fracaoEvaporativa = numpy.choose(self.mask, (Valores.noValue, (TH - self.temperaturaSuperficie) / (TH - TC)))\n')
+	
 
 class Formulas(Valores):
 	
@@ -150,7 +275,7 @@ class Formulas(Valores):
 		dados = None
 		self.entrada = None
 	
-	def fazCalculos(self):	
+	def fazCalculos(self,codigo):	
 		self.ndvi()
 		self.savi()
 		self.iaf()
@@ -159,7 +284,7 @@ class Formulas(Valores):
 		self.temperaturaSuperficie()
 		self.saldoRadiacao()
 		self.fluxoCalSolo()
-		
+		exec(codigo)
 	
 	def ndvi(self):
 		self.ndvi = numpy.choose(self.mask, (Valores.noValue, (self.reflectanciaB4 - self.reflectanciaB3) / (self.reflectanciaB4 + self.reflectanciaB3)))
@@ -236,152 +361,6 @@ class Formulas(Valores):
 		
 	def getFluxoCalSolo(self):
 		return self.fluxoCalSolo
-	
-	def fracaoEvaporativaSSEB(self):
-		hotNdvi = numpy.array([],dtype=numpy.float32)
-		coldTemp = numpy.array([],dtype=numpy.float32)
-
-		coldNdvi = numpy.array([],dtype=numpy.float32)
-		hotTemp = numpy.array([],dtype=numpy.float32)
-
-		tempSuperficie = self.getTemperaturaSuperficie()
-
-		tempSuperficie.reshape(-1)
-		ndvi_aux = self.getNDVI()
-		ndvi_aux.reshape(-1)
-
-		tempSuperficie = tempSuperficie[self.mask]
-		ndvi_aux = ndvi_aux[self.mask]
-
-		for i in xrange(Valores.qtdPontos):
-			if hotNdvi.size < Valores.qtdPontos:
-				tempNdviIgual = numpy.array([])
-
-				hotNdvi = numpy.append(hotNdvi,ndvi_aux[numpy.nanargmax(ndvi_aux)])
-				tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[numpy.nanargmax(ndvi_aux)])
-				ndvi_aux[numpy.nanargmax(ndvi_aux)] = numpy.nan
-
-				prox = numpy.nanargmax(ndvi_aux)
-				posUlt = hotNdvi.size-1
-
-				while hotNdvi[posUlt] == ndvi_aux[prox]:
-					tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[prox])
-
-					ndvi_aux[prox] = numpy.nan
-					prox = numpy.nanargmax(ndvi_aux)
-
-				if tempNdviIgual.size > 1:
-					tempNdviIgual = numpy.sort(tempNdviIgual)
-
-					tamTempNdviIg = tempNdviIgual.size
-					if tamTempNdviIg > (Valores.qtdPontos - posUlt):
-						tamTempNdviIg = Valores.qtdPontos - posUlt
-
-					coldTemp = numpy.append(coldTemp,tempNdviIgual[:tamTempNdviIg])
-
-					for j in xrange(tamTempNdviIg-1):
-						hotNdvi = numpy.append(hotNdvi,hotNdvi[posUlt])
-
-				else:
-					coldTemp = numpy.append(coldTemp,tempNdviIgual[0])
-
-				tempNdviIgual = None
-
-			if coldNdvi.size < Valores.qtdPontos:
-				tempNdviIgual = numpy.array([])
-
-				coldNdvi = numpy.append(coldNdvi,ndvi_aux[numpy.nanargmin(ndvi_aux)])
-				tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[numpy.nanargmin(ndvi_aux)])
-				ndvi_aux[numpy.nanargmin(ndvi_aux)] = numpy.nan
-
-				prox = numpy.nanargmin(ndvi_aux)
-				posUlt = coldNdvi.size-1
-
-				while coldNdvi[posUlt] == ndvi_aux[prox]:
-					tempNdviIgual = numpy.append(tempNdviIgual,tempSuperficie[prox])
-
-					ndvi_aux[prox] = numpy.nan
-					prox = numpy.nanargmin(ndvi_aux)
-
-				if tempNdviIgual.size > 1:
-					tempNdviIgual = numpy.sort(tempNdviIgual)[::-1]
-
-					tamTempNdviIg = tempNdviIgual.size
-					if tamTempNdviIg > (Valores.qtdPontos - posUlt):
-						tamTempNdviIg = Valores.qtdPontos - posUlt
-
-					hotTemp = numpy.append(hotTemp,tempNdviIgual[:tamTempNdviIg])
-
-					for j in xrange(tamTempNdviIg-1):
-						coldNdvi = numpy.append(coldNdvi,coldNdvi[posUlt])
-
-				else:
-					hotTemp = numpy.append(hotTemp,tempNdviIgual[0])
-
-				tempNdviIgual = None
-
-		ndvi_aux = None
-		tempSuperficie = None
-
-		#----------
-		hotTemp = numpy.sort(hotTemp)
-		coldTemp = numpy.sort(coldTemp)
-
-		TH = numpy.mean(hotTemp[-3:])
-		TC = numpy.mean(coldTemp[:3])
-
-		self.fracaoEvaporativa = numpy.choose(self.mask, (Valores.noValue, (TH - self.temperaturaSuperficie) / (TH - TC)))
-	
-	def fracaoEvaporativaSSEBI(self):
-		albedoSupMax = numpy.amax(self.albedoSuperficie)
-		maskAlbedoSuper = numpy.logical_and(self.albedoSuperficie <= (albedoSupMax * 0.2), self.albedoSuperficie != Valores.noValue)
-		limiteLadoEsq = self.temperaturaSuperficie[maskAlbedoSuper]
-
-		maskAlbedoSuper = self.albedoSuperficie >= (albedoSupMax * 0.8)
-		limiteLadoDir = self.temperaturaSuperficie[maskAlbedoSuper]
-
-		maskAlbedoSuper = None
-		self.mask1 = limiteLadoEsq != Valores.noValue
-		limiteLadoEsq = limiteLadoEsq[self.mask1]
-
-		self.mask1 = limiteLadoDir != Valores.noValue
-		limiteLadoDir = limiteLadoDir[self.mask1]
-
-		self.mask1 = None
-
-		limiteLadoEsq = numpy.sort(limiteLadoEsq)
-		limiteLadoDir = numpy.sort(limiteLadoDir)
-
-		limSupEsq = limiteLadoEsq[::-1][0:Valores.qtdPontos]
-		limInfEsq = limiteLadoEsq[0:Valores.qtdPontos]
-
-		limSupDir = limiteLadoDir[::-1][0:Valores.qtdPontos]
-		limInfDir = limiteLadoDir[0:Valores.qtdPontos]
-
-		limiteLadoEsq = None
-		limiteLadoDir = None
-		#----------
-
-		limSupEsq = numpy.average(limSupEsq)
-		limInfEsq = numpy.average(limInfEsq)
-		limSupDir = numpy.average(limSupDir)
-		limInfDir = numpy.average(limInfDir)
-		
-		x1 = 0.1
-		x2 = albedoSupMax
-		x2x1 = x2 - x1
-
-		m1 = (limSupDir - limSupEsq) / x2x1
-		m2 = (limInfDir - limInfEsq) / x2x1
-
-		c1 = ((x2 * limSupEsq) - (x1 * limSupDir)) / x2x1
-		c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1
-
-		#----------
-
-		self.fracaoEvaporativa = numpy.choose(self.mask, (Valores.noValue, (c1 + (m1 * self.albedoSuperficie) - self.temperaturaSuperficie)\
-												/ ((c1 - c2) + ((m1 - m2) * self.albedoSuperficie))))
-
 
 	def getFracaoEvaporativa(self):
 		return self.fracaoEvaporativa
@@ -407,42 +386,6 @@ class Formulas(Valores):
 		self.ndvi = None
 		self.savi = None
 		self.iaf = None
-
-class SalvaImagens():
-	def __init__(self, nome, opcao):
-		img = AbreImagem(nome, opcao)
-		formulas = Formulas()
-		formulas.reflectanciaParte1(img.getBandas())
-		formulas.reflectanciaParte2(img.getBandas(),img.getEntrada())
-		formulas.fazCalculos()
-		
-		if opcao == 1:
-			formulas.fracaoEvaporativaSSEBI()
-		else:
-			formulas.fracaoEvaporativaSSEB()
-			
-		img.saidaImagem('ndvi',formulas.getNDVI())
-		img.saidaImagem('savi',formulas.getSAVI())
-		img.saidaImagem('iaf',formulas.getIAF())
-		img.saidaImagem('albedoSuperficie',formulas.getAlbedoSuper())
-		img.saidaImagem('temperaturaSuperficie',formulas.getTemperaturaSuperficie())
-		img.saidaImagem('saldoRadiacao',formulas.getSaldoRadiacao())
-		img.saidaImagem('fluxoCalSolo',formulas.getFluxoCalSolo())
-		img.saidaImagem('fracaoEvaporativa',formulas.getFracaoEvaporativa())
-		img.saidaImagem('fluxoCalorSensivel',formulas.getFluxoCalorSensivel())
-		img.saidaImagem('fluxoCalorLatente',formulas.getFluxoCalorLatente())
-		img.saidaImagem('evapotranspiracao24h',formulas.getEvapotranspiracao24h())
-		formulas.passoFinal()
-		img = None
-		formulas = None
-	
-class SSEBI():
-	def __init__(self,nome):
-		a = SalvaImagens(nome, 1)
-
-class SSEB():
-	def __init__(self,nome):
-		a = SalvaImagens(nome, 2)
 
 if __name__== '__main__': 
 	inicio = time.time()
