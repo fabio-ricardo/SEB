@@ -1,0 +1,6 @@
+nova_funcao(x,y,z)
+a = y+z**x
+O_b = z+x
+O_c_(a>b)=a*b
+c_(a<b)=a/b
+O_d=outra_funcao(c)
