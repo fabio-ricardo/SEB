@@ -74,12 +74,18 @@ def analSintaFuncao(nomeArquivo):
     j += 1
     while(j < len(dadosArq[0]) and dadosArq[0][j] != ')'):
         if(dadosArq[0][j] in caracteres):
-            caracteres = caracteresComNum
+            if(caracteres == caracteresSemNum):
+                caracteres = caracteresComNum
+            elif(caracteres == list(',')):
+                caracteres = caracteresSemNum
         else:
-            if(dadosArq[0][j] != ','):
+            if(dadosArq[0][j] == ' '):
+                if(caracteres == caracteresComNum):
+                    caracteres = list(',')
+            elif(dadosArq[0][j] == ','):
+                caracteres = caracteresSemNum
+            else:
                 return 'erro',0,j
-
-            caracteres = caracteresSemNum
 
         j += 1
 
