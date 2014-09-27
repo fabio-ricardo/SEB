@@ -97,14 +97,78 @@ class Valores():
 		
 	def setUR(self,ur):
 		self.UR = ur
+
+#Salva as imagens obtidas pelos cálculos
+class SalvaImagens():
+	def __init__(self, nome, algNome,fracao, Ta, UR, Z, julianDay):
+		img = AbreImagem(nome, algNome)	
+		formulas = Formulas( Ta, UR, Z, julianDay)
+		xBlockSize = 1000
+		yBlockSize = 1000
+		linhas = img.getLinhas()
+		colunas = img.getColunas()
+		
+		saidaNDVI, bandaNDVI = img.criaImagem('ndvi', linhas, colunas)
+		saidaSAVI, bandaSAVI = img.criaImagem('savi', linhas, colunas)
+		saidaIAF,bandaIAF = img.criaImagem('iaf', linhas, colunas)
+		saidaAlbedo, bandaAlbedoSuper = img.criaImagem('albedoSuperficie', linhas, colunas)
+		saidaTemp, bandaTempSuper = img.criaImagem('temperaturaSuperficie', linhas, colunas)
+		saidaRad, bandaSaldoRad = img.criaImagem('saldoRadiacao', linhas, colunas)
+		saidaFluxo, bandaFluxo = img.criaImagem('fluxoCalSolo', linhas, colunas)
+		saidaFracao, bandaFracao = img.criaImagem('fracaoEvaporativa', linhas, colunas)
+		
+		for i in xrange(0,linhas,yBlockSize):
+			if i + yBlockSize < linhas:
+				lerLinhas = yBlockSize
+			else:
+				lerLinhas = linhas - i
+
+			for j in xrange(0,colunas,xBlockSize):
+				if j + xBlockSize < colunas:
+					lerColunas = xBlockSize
+				else:
+					lerColunas = colunas - j
+				
+				formulas.reflectanciaParte1(img.getBandas())
+				formulas.reflectanciaParte2(img.getBandas(),img.getEntrada(), j, i, lerColunas, lerLinhas)
+				formulas.fazCalculos(fracao, i, j, lerLinhas, lerColunas)
+				print formulas.getNDVI().shape
+				img.saidaImagem('ndvi',bandaNDVI,formulas.getNDVI(), i, j)
+				img.saidaImagem('savi',bandaSAVI,formulas.getSAVI(), i, j)
+				img.saidaImagem('iaf', bandaIAF, formulas.getIAF(), i, j)
+				img.saidaImagem('albedoSuperficie', bandaAlbedoSuper, formulas.getAlbedoSuper(), i, j)
+				img.saidaImagem('temperaturaSuperficie',bandaTempSuper, formulas.getTemperaturaSuperficie(), i, j)
+				img.saidaImagem('saldoRadiacao',bandaSaldoRad, formulas.getSaldoRadiacao(), i, j)
+				img.saidaImagem('fluxoCalSolo',bandaFluxo, formulas.getFluxoCalSolo(), i, j)
+				
+				img.saidaImagem('fracaoEvaporativa', bandaFracao, formulas.getFracaoEvaporativa(), i, j)
+				
+		'''img.saidaImagem('fluxoCalorSensivel',formulas.getFluxoCalorSensivel(), xBlockSize, yBlockSize)
+		img.saidaImagem('fluxoCalorLatente',formulas.getFluxoCalorLatente(), xBlockSize, yBlockSize)
+		img.saidaImagem('evapotranspiracao24h',formulas.getEvapotranspiracao24h(), xBlockSize, yBlockSize)
+		formulas.passoFinal()'''
+					
+		saidaNDVI = bandaNDVI = None
+		saidaSAVI = bandaSAVI = None
+		saidaIAF = bandaIAF = None
+		saidaAlbedo = bandaAlbedoSuper = None
+		saidaTemp = bandaTempSuper = None
+		saidaRad = bandaSaldoRad = None
+		saidaFluxo = bandaFluxo = None
+		img = None
+		formulas = None
+
+
+
 #Todas as fórmulas utilizadas
-class Formulas():
+class Formulas(SalvaImagens):
 	def __init__(self, Ta, UR, Z, julianDay):
 		 self.valores = Valores()
 		 self.valores.setTa(Ta)
 		 self.valores.setUR(UR)
 		 self.valores.setZ(Z)
 		 self.valores.setJulianDay(julianDay)
+		 self.albedoSupMax = 0
 	
 	def reflectanciaParte1(self,NBandas):
 		self.p1 = numpy.zeros([NBandas+1],dtype=numpy.float32)
@@ -153,7 +217,7 @@ class Formulas():
 		dados = None
 		#self.entrada = None
 	
-	def fazCalculos(self, fracao):	
+	def fazCalculos(self, fracao,i, j, lerLinhas, lerColunas):	
 		self.setNdvi()
 		self.setSavi()
 		self.setIaf()
@@ -162,7 +226,7 @@ class Formulas():
 		self.tempSuper()
 		self.setSaldoRadiacao()
 		self.setFluxoCalSolo()
-		#exec(fracao)
+		exec(fracao)
 	
 	def setNdvi(self):
 		self.ndvi = numpy.choose(self.mask, (self.valores.noValue, (self.reflectanciaB4 - self.reflectanciaB3) / (self.reflectanciaB4 + self.reflectanciaB3)))
@@ -193,6 +257,8 @@ class Formulas():
 		
 	def albedoSuper(self):
 		self.albedoSuperficie = numpy.choose(self.mask, (self.valores.noValue, (self.albedoPlanetario - self.valores.ap) * self.valores.p2))
+		if numpy.amax(self.albedoSuperficie) > self.albedoSupMax:
+			self.albedoSupMax = numpy.amax(self.albedoSuperficie)
 		self.albedoPlanetario = None
 		
 	def getAlbedoSuper(self):
@@ -266,37 +332,56 @@ class Formulas():
 		self.savi = None
 		self.iaf = None
 	
-	def fracaoEvaporativaSSEBI(self):
-		albedoSupMax = numpy.amax(self.getAlbedoSuper())
-		maskAlbedoSuper = numpy.logical_and(self.albedoSuperficie <= (albedoSupMax * 0.2), self.getAlbedoSuper() != self.valores.noValue)
-		limiteLadoEsq = self.temperaturaSuperficie[maskAlbedoSuper]
-		maskAlbedoSuper = self.getAlbedoSuper() >= (albedoSupMax * 0.8)
-		limiteLadoDir = self.temperaturaSuperficie[maskAlbedoSuper]
+	def fracaoEvaporativaSSEBI(self, i, j, lerLinhas, lerColunas):
+		##RESOLVER PROBLEMAS DAS BANDAS
+		albedoSuperficie = bandaAlbedoSuper.ReadAsArray(j,i,lerColunas,lerLinhas)
+		temperaturaSuperficie = bandaTempSuper.ReadAsArray(j,i,lerColunas,lerLinhas)
+		maskAlbedoSuper = numpy.logical_and(albedoSuperficie <= (self.albedoSupMax * 0.2), albedoSuperficie != self.valores.noValue)
+		limiteLadoEsq = temperaturaSuperficie[maskAlbedoSuper]
+		maskAlbedoSuper = albedoSuperficie >= (self.albedoSupMax * 0.8)
+		limiteLadoDir = temperaturaSuperficie[maskAlbedoSuper]
 		maskAlbedoSuper = None
+		albedoSuperficie = None
+		temperaturaSuperficie = None
 		self.mask1 = limiteLadoEsq != self.valores.noValue
 		limiteLadoEsq = limiteLadoEsq[self.mask1]
 		self.mask1 = limiteLadoDir != self.valores.noValue
 		limiteLadoDir = limiteLadoDir[self.mask1]
 		self.mask1 = None
-		limiteLadoEsq = numpy.sort(limiteLadoEsq)
-		limiteLadoDir = numpy.sort(limiteLadoDir)
-		limSupEsq = limiteLadoEsq[::-1][0:self.valores.qtdPontos]
-		limInfEsq = limiteLadoEsq[0:self.valores.qtdPontos]
-		limSupDir = limiteLadoDir[::-1][0:self.valores.qtdPontos]
-		limInfDir = limiteLadoDir[0:self.valores.qtdPontos]
+		if (limiteLadoEsq.size > 0):
+			if (limEsqPVez):
+				limiteLadoEsq = numpy.sort(limiteLadoEsq)
+				limSupEsq = limiteLadoEsq[::-1][0:self.valores.qtdPontos]
+				limInfEsq = limiteLadoEsq[0:self.valores.qtdPontos]
+				limEsqPVez = False
+			else:
+				limSupEsq = numpy.sort(numpy.concatenate((limSupEsq,limiteLadoEsq)))[::-1][0:self.valores.qtdPontos]
+				limInfEsq = numpy.sort(numpy.concatenate((limInfEsq,limiteLadoEsq)))[0:self.valores.qtdPontos]
+		if (limiteLadoDir.size > 0):
+			if (limDirPVez):
+				limiteLadoDir = numpy.sort(limiteLadoDir)
+				limSupDir = limiteLadoDir[::-1][0:self.valores.qtdPontos]
+				limInfDir = limiteLadoDir[0:self.valores.qtdPontos]
+				limDirPVez = False
+			else:
+				limSupDir = numpy.sort(numpy.concatenate((limSupDir,limiteLadoDir)))[::-1][0:self.valores.qtdPontos]
+				limInfDir = numpy.sort(numpy.concatenate((limInfDir,limiteLadoDir)))[0:self.valores.qtdPontos]
 		limiteLadoEsq = None
-		limiteLadoDir = None
-		limSupEsq = numpy.average(limSupEsq)
-		limInfEsq = numpy.average(limInfEsq)
-		limSupDir = numpy.average(limSupDir)
-		limInfDir = numpy.average(limInfDir)
+		limiteLadoDir = None	
+		
+		self.limSupEsq = numpy.average(limSupEsq)
+		self.limInfEsq = numpy.average(limInfEsq)
+		self.limSupDir = numpy.average(limSupDir)
+		self.limInfDir = numpy.average(limInfDir)
+		
+	def fracao(self):	
 		x1 = 0.1
-		x2 = albedoSupMax
+		x2 = self.albedoSupMax
 		x2x1 = x2 - x1
-		m1 = (limSupDir - limSupEsq) / x2x1
-		m2 = (limInfDir - limInfEsq) / x2x1
-		c1 = ((x2 * limSupEsq) - (x1 * limSupDir)) / x2x1
-		c2 = ((x2 * limInfEsq) - (x1 * limInfDir)) / x2x1
+		m1 = (self.limSupDir - self.limSupEsq) / x2x1
+		m2 = (self.limInfDir - self.limInfEsq) / x2x1
+		c1 = ((x2 * self.limSupEsq) - (x1 * self.limSupDir)) / x2x1
+		c2 = ((x2 * self.limInfEsq) - (x1 * self.limInfDir)) / x2x1
 		self.fracaoEvaporativa = numpy.choose(self.mask, (self.valores.noValue, (c1 + (m1 * self.getAlbedoSuper()) - self.temperaturaSuperficie)/((c1 - c2) + ((m1 - m2) * self.getAlbedoSuper()))))
 
 	def fracaoEvaporativaSSEB(self):
@@ -363,70 +448,10 @@ class Formulas():
 		TC = numpy.mean(coldTemp[:3])
 		self.fracaoEvaporativa = numpy.choose(self.mask, (self.valores.noValue, (TH - self.temperaturaSuperficie) / (TH - TC)))
 		
-#Salva as imagens obtidas pelos cálculos
-class SalvaImagens():
-	def __init__(self, nome, algNome,fracao, Ta, UR, Z, julianDay):
-		img = AbreImagem(nome, algNome)	
-		formulas = Formulas( Ta, UR, Z, julianDay)
-		xBlockSize = 1000
-		yBlockSize = 1000
-		linhas = img.getLinhas()
-		colunas = img.getColunas()
 		
-		saidaNDVI, bandaNDVI = img.criaImagem('ndvi', linhas, colunas)
-		saidaSAVI, bandaSAVI = img.criaImagem('savi', linhas, colunas)
-		saidaIAF,bandaIAF = img.criaImagem('iaf', linhas, colunas)
-		saidaAlbedo, bandaAlbedo = img.criaImagem('albedoSuperficie', linhas, colunas)
-		saidaTemp, bandaTemp = img.criaImagem('temperaturaSuperficie', linhas, colunas)
-		saidaRad, bandaSaldoRad = img.criaImagem('saldoRadiacao', linhas, colunas)
-		saidaFluxo, bandaFluxo = img.criaImagem('fluxoCalSolo', linhas, colunas)
-		
-		for i in xrange(0,linhas,yBlockSize):
-			if i + yBlockSize < linhas:
-				lerLinhas = yBlockSize
-			else:
-				lerLinhas = linhas - i
-
-			for j in xrange(0,colunas,xBlockSize):
-				if j + xBlockSize < colunas:
-					lerColunas = xBlockSize
-				else:
-					lerColunas = colunas - j
-				
-				formulas.reflectanciaParte1(img.getBandas())
-				formulas.reflectanciaParte2(img.getBandas(),img.getEntrada(), j, i, lerColunas, lerLinhas)
-				formulas.fazCalculos(fracao)
-				print formulas.getNDVI().shape
-				img.saidaImagem('ndvi',bandaNDVI,formulas.getNDVI(), i, j)
-				img.saidaImagem('savi',bandaSAVI,formulas.getSAVI(), i, j)
-				img.saidaImagem('iaf', bandaIAF, formulas.getIAF(), i, j)
-				img.saidaImagem('albedoSuperficie', bandaAlbedo, formulas.getAlbedoSuper(), i, j)
-				img.saidaImagem('temperaturaSuperficie',bandaTemp, formulas.getTemperaturaSuperficie(), i, j)
-				img.saidaImagem('saldoRadiacao',bandaSaldoRad, formulas.getSaldoRadiacao(), i, j)
-				img.saidaImagem('fluxoCalSolo',bandaFluxo, formulas.getFluxoCalSolo(), i, j)
-		'''
-		img.saidaImagem('fracaoEvaporativa',formulas.getFracaoEvaporativa(), xBlockSize, yBlockSize)
-		img.saidaImagem('fluxoCalorSensivel',formulas.getFluxoCalorSensivel(), xBlockSize, yBlockSize)
-		img.saidaImagem('fluxoCalorLatente',formulas.getFluxoCalorLatente(), xBlockSize, yBlockSize)
-		img.saidaImagem('evapotranspiracao24h',formulas.getEvapotranspiracao24h(), xBlockSize, yBlockSize)
-		formulas.passoFinal()'''
-					
-		saidaNDVI = bandaNDVI = None
-		saidaSAVI = bandaSAVI = None
-		saidaIAF = bandaIAF = None
-		saidaAlbedo = bandaAlbedo = None
-		saidaTemp = bandaTemp = None
-		saidaRad = bandaSaldoRad = None
-		saidaFluxo = bandaFluxo = None
-		img = None
-		formulas = None
-		
-	
-
-
 class SSEBI():
 	def __init__(self,nome, Ta, UR, Z, julianDay):
-		a = SalvaImagens(nome, 'S-SEBI','self.fracaoEvaporativaSSEBI()', Ta, UR, Z, julianDay)
+		a = SalvaImagens(nome, 'S-SEBI','self.fracaoEvaporativaSSEBI(i, j, lerLinhas, lerColunas)\nself.fracao()', Ta, UR, Z, julianDay)
 		
 
 class SSEB():
