@@ -12,9 +12,10 @@ extensao = '.jfrv'
 #----------
 
 numeros = list(['0','1','2','3','4','5','6','7','8','9'])
-operadores = list(['*','/','-','+'])
 caracteresAlfabeto = list(map(chr,range(ord('a'), ord('z') + 1))) +\
                                    list(map(chr,range(ord('A'), ord('Z') + 1)))
+operadoresAritmeticos = list(['*','/','-','+','%'])
+operadoresLogicos = list(['=','<','>','!'])
 
 #----------
 
@@ -80,7 +81,7 @@ def analisadorSintaticoFuncao(nomeArquivo):
     if(dadosArq[0] == 'abrir'):
         return dadosArq
 
-    tokens = tokenizar(dadosArq,operadores+list(['(',')',',','=','<','>','!']))
+    tokens = tokenizar(dadosArq,operadoresAritmeticos+list(['(',')',','])+operadoresLogicos)
     print tokens
 
     if(tokens[0] == '\n'):
@@ -132,19 +133,8 @@ def definirTipos(tokens):
             if(type(verifica) == int):
                 return i
 
-            if(tokensTipos[i][0] == 'O' and (len(tokensTipos[i]) > 1 and tokensTipos[i][1] == '_')):
-                if(tokensTipos[i][len(tokensTipos[i])-1] == '_' and\
-                  (len(tokensTipos) > (i+1) and tokensTipos[i+1][0] == '(')):
-                    tokensTipos[i] = '<O_identificador_IF>'
-                else:
-                    tokensTipos[i] = '<O_identificador>'
-            else:
-                if(tokensTipos[i][len(tokensTipos[i])-1] == '_' and\
-                  (len(tokensTipos) > (i+1) and tokensTipos[i+1][0] == '(')\
-                   and i != 0):
-                    tokensTipos[i] = '<identificador_IF>'
-                else:
-                    tokensTipos[i] = '<identificador>'
+            tokensTipos[i] = '<identificador>'
+
         elif(tokensTipos[i][0] in numeros):
             verifica = verificador(tokensTipos[i][1:],numeros)
             if(type(verifica) == int):
@@ -214,6 +204,30 @@ def definirTipos(tokens):
                         return i
             else:
                 tokensTipos[i] = '<numeroInteiro>'
+        elif(tokensTipos[i][0] in operadoresAritmeticos):
+            if((len(tokensTipos) > i+1) and ((tokensTipos[i][0] == '*' and tokensTipos[i+1][0] == '*')\
+                    or (tokensTipos[i][0] == '/' and tokensTipos[i+1][0] == '/'))):
+                tokens[i] = tokens[i]+tokens[i+1]
+                tokensTipos[i] = '<operadorAritmetico>'
+                del tokens[i+1]
+                del tokensTipos[i+1]
+            else:
+                tokensTipos[i] = '<operadorAritmetico>'
+        elif(tokensTipos[i][0] in operadoresLogicos):
+            print tokensTipos[i]
+            if((len(tokensTipos) > i+1) and ((tokensTipos[i][0] == '<' and tokensTipos[i+1][0] == '=')\
+                    or (tokensTipos[i][0] == '>' and tokensTipos[i+1][0] == '=')\
+                    or (tokensTipos[i][0] == '!' and tokensTipos[i+1][0] == '=')\
+                    or (tokensTipos[i][0] == '=' and tokensTipos[i+1][0] == '='))):
+                tokens[i] = tokens[i]+tokens[i+1]
+                tokensTipos[i] = '<operadorLogico>'
+                del tokens[i+1]
+                del tokensTipos[i+1]
+            elif(tokensTipos[i][0] != '='):
+                tokensTipos[i] = '<operadorLogico>'
+        else:
+            if(not (tokensTipos[i][0] in list(['(',')',',','\n']))):
+                return i
 
         i = i + 1
 
@@ -314,7 +328,7 @@ def expressaoAritmetica(tokens, coluna):
     if(len(tokens) == 2):
         return coluna+2,tokens[1][0]
 
-    verifica = verificador(tokens[1],operadores) #<operador>
+    verifica = verificador(tokens[1],operadoresAritmeticos) #<operador>
     if(verifica != True):
         return verifica+1+coluna,tokens[1][verifica]
 
