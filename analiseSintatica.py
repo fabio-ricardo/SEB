@@ -146,8 +146,6 @@ def definirTipos(tokens):
                 else:
                     tokensTipos[i] = '<identificador>'
         elif(tokensTipos[i][0] in numeros):
-            print tokensTipos[i]
-
             verifica = verificador(tokensTipos[i][1:],numeros)
             if(type(verifica) == int):
                 if(tokensTipos[i][verifica+1] == '.'):
@@ -159,7 +157,7 @@ def definirTipos(tokens):
                                 if(type(verifica) == int):
                                     return i
                                 else:
-                                    tokensTipos[i] = '<1numeroReal>'
+                                    tokensTipos[i] = '<numeroReal>'
                             else:
                                 if(len(tokensTipos) > i+1 and (tokensTipos[i+1] == '+' or tokensTipos[i+1] == '-')):
                                     if(len(tokensTipos) > i+2):
@@ -168,7 +166,7 @@ def definirTipos(tokens):
                                             return i+2
                                         else:
                                             tokens[i] = tokens[i]+tokens[i+1]+tokens[i+2]
-                                            tokensTipos[i] = '<2numeroReal>'
+                                            tokensTipos[i] = '<numeroReal>'
                                             del tokens[i+1]
                                             del tokens[i+1]
                                             del tokensTipos[i+1]
@@ -180,6 +178,40 @@ def definirTipos(tokens):
                                         return i+1
                                     else:
                                         return i
+                        else:
+                            return i
+                    else:
+                        tokensTipos[i] = '<numeroReal>'
+                else:
+                    if(tokensTipos[i][verifica+1] == 'E' or tokensTipos[i][verifica+1] == 'e'):
+                        if(len(tokensTipos[i]) > verifica+2):
+                            verifica = verificador(tokensTipos[i][verifica+2:],numeros)
+                            if(type(verifica) == int):
+                                return i
+                            else:
+                                tokensTipos[i] = '<numeroInteiro>'
+                        else:
+                            if(len(tokensTipos) > i+1 and (tokensTipos[i+1] == '+' or tokensTipos[i+1] == '-')):
+                                if(len(tokensTipos) > i+2):
+                                    verifica = verificador(tokensTipos[i+2],numeros)
+                                    if(type(verifica) == int):
+                                        return i+2
+                                    else:
+                                        tokens[i] = tokens[i]+tokens[i+1]+tokens[i+2]
+                                        tokensTipos[i] = '<numeroInteiro>'
+                                        del tokens[i+1]
+                                        del tokens[i+1]
+                                        del tokensTipos[i+1]
+                                        del tokensTipos[i+1]
+                                else:
+                                    return i+1
+                            else:
+                                if(len(tokensTipos) > i+1):
+                                    return i+1
+                                else:
+                                    return i
+                    else:
+                        return i
             else:
                 tokensTipos[i] = '<numeroInteiro>'
 

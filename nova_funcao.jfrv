@@ -1,5 +1,6 @@
 nova_funcao(x,y,z)
-d = 5.3 + 4 - 3 a a = y+z*x
+d = 5.3 + 4 - 3
+a = y+z*x
 O_b = z+x
 O_c_((a+v)>b)=a*b
 c_(a<b)=a/b
