@@ -1,4 +1,4 @@
-nova_funcao(x,y,z)
+nova_funcao(x,y,w,z)
 d = 5.3 + 4 - 3
 a = y+z*x
 O_b = z+x
