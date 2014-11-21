@@ -87,7 +87,7 @@ def analisadorSintaticoFuncao(nomeArquivo):
     if(type(tokensTipos) == int):
         return tokensTipos
 
-    return expArquivoFuncao(tokensTipos)
+    return expArquivoFuncao(tokensTipos,tokens)
 
     #----------
 
@@ -117,7 +117,7 @@ def validarTipos(tokens):
                                 if(type(verifica) == int):
                                     return i
                                 else:
-                                    tokensTipos[i] = '<numeroReal>'
+                                    tokensTipos[i] = '<numero>'
                             else:
                                 if(len(tokensTipos) > i+1 and (tokensTipos[i+1] == '+' or tokensTipos[i+1] == '-')):
                                     if(len(tokensTipos) > i+2):
@@ -126,7 +126,7 @@ def validarTipos(tokens):
                                             return i+2
                                         else:
                                             tokens[i] = tokens[i]+tokens[i+1]+tokens[i+2]
-                                            tokensTipos[i] = '<numeroReal>'
+                                            tokensTipos[i] = '<numero>'
                                             del tokens[i+1]
                                             del tokens[i+1]
                                             del tokensTipos[i+1]
@@ -141,7 +141,7 @@ def validarTipos(tokens):
                         else:
                             return i
                     else:
-                        tokensTipos[i] = '<numeroReal>'
+                        tokensTipos[i] = '<numero>'
                 else:
                     if(tokensTipos[i][verifica+1] == 'E' or tokensTipos[i][verifica+1] == 'e'):
                         if(len(tokensTipos[i]) > verifica+2):
@@ -149,7 +149,7 @@ def validarTipos(tokens):
                             if(type(verifica) == int):
                                 return i
                             else:
-                                tokensTipos[i] = '<numeroInteiro>'
+                                tokensTipos[i] = '<numero>'
                         else:
                             if(len(tokensTipos) > i+1 and (tokensTipos[i+1] == '+' or tokensTipos[i+1] == '-')):
                                 if(len(tokensTipos) > i+2):
@@ -158,7 +158,7 @@ def validarTipos(tokens):
                                         return i+2
                                     else:
                                         tokens[i] = tokens[i]+tokens[i+1]+tokens[i+2]
-                                        tokensTipos[i] = '<numeroInteiro>'
+                                        tokensTipos[i] = '<numero>'
                                         del tokens[i+1]
                                         del tokens[i+1]
                                         del tokensTipos[i+1]
@@ -173,7 +173,7 @@ def validarTipos(tokens):
                     else:
                         return i
             else:
-                tokensTipos[i] = '<numeroInteiro>'
+                tokensTipos[i] = '<numero>'
         elif(tokensTipos[i][0] in operadoresAritmeticos):
             if((len(tokensTipos) > i+1) and ((tokensTipos[i][0] == '*' and tokensTipos[i+1][0] == '*')\
                     or (tokensTipos[i][0] == '/' and tokensTipos[i+1][0] == '/'))):
@@ -217,8 +217,12 @@ def verificador(tokens, lista):
 
 #----------
 
-def expArquivoFuncao(tokens):
-    verifica = expDeclararFuncao(tokens,0)
+def expArquivoFuncao(tokensTipos,tokens):
+    verifica = expDeclararFuncao(tokensTipos,tokens,0)
+    if(verifica[0] == False):
+        return verifica[1]
+
+    verifica = expressoesComandos(tokensTipos,tokens,verifica[1])
     if(verifica[0] == False):
         return verifica[1]
 
@@ -228,16 +232,16 @@ def expArquivoFuncao(tokens):
 
 #----------
 
-def expDeclararFuncao(tokens,i):
-    if(len(tokens) > i and tokens[i] == '<identificador>'):
-        if(len(tokens) > i+1 and tokens[i+1] == '('):
-            if(len(tokens) > i+2 and tokens[i+2] == ')'):
-                return (True,i+2)
+def expDeclararFuncao(tokensTipos,tokens,i):
+    if(len(tokensTipos) > i and tokensTipos[i] == '<identificador>'):
+        if(len(tokensTipos) > i+1 and tokensTipos[i+1] == '('):
+            if(len(tokensTipos) > i+2 and tokensTipos[i+2] == ')'):
+                return (True,i+3)
             else:
-                verifica = expVariaveisFuncao(tokens,i+2)
+                verifica = expVariaveisFuncao(tokensTipos,tokens,i+2)
                 if(verifica[0] == True):
-                    if(len(tokens) > verifica[1] and tokens[verifica[1]] == ')'):
-                        return (True,verifica[1])
+                    if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == ')'):
+                        return (True,verifica[1]+1)
                     else:
                         return (False,verifica[1])
                 else:
@@ -251,14 +255,148 @@ def expDeclararFuncao(tokens,i):
 
 #----------
 
-def expVariaveisFuncao(tokens,i):
-    if(len(tokens) > i and tokens[i] == '<identificador>'):
-        if(len(tokens) > i+1 and tokens[i+1] == ','):
-            return expVariaveisFuncao(tokens,i+2)
+def expVariaveisFuncao(tokensTipos,tokens,i):
+    if(len(tokensTipos) > i and tokensTipos[i] == '<identificador>'):
+        if(len(tokensTipos) > i+1 and tokensTipos[i+1] == ','):
+            return expVariaveisFuncao(tokensTipos,tokens,i+2)
         else:
             return (True,i+1)
     else:
         return (False,i)
+
+    #----------
+
+#----------
+
+def expressoesComandos(tokensTipos,tokens,i):
+    if(len(tokensTipos) > i):
+        verifica = expressaoComando(tokensTipos,tokens,i)
+        if(verifica[0] == False):
+            return (False,verifica[1])
+        else:
+            if(len(tokensTipos) > verifica[1]):
+                return expressoesComandos(tokensTipos,tokens,verifica[1])
+            else:
+                return (True,verifica[1])
+    else:
+        return (False,i)
+
+    #----------
+
+#----------
+
+def expressaoComando(tokensTipos,tokens,i):
+    verifica = expressaoRecebe(tokensTipos,tokens,i)
+    if(verifica[0] == False):
+        return (False,verifica[1])
+    else:
+        if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == '='):
+            verifica = expressaoAritmetica(tokensTipos,tokens,verifica[1]+1)
+            if(verifica[0] == False):
+                return (False,verifica[1])
+            else:
+                return (True,verifica[1])
+        else:
+            return (False,verifica[1])
+
+    #----------
+
+#----------
+
+def expressaoRecebe(tokensTipos,tokens,i):
+    if(len(tokensTipos) > i and tokensTipos[i] == '<identificador>'):
+        if(len(tokensTipos) > i+1 and tokensTipos[i+1] == '('):
+            if(tokens[i][len(tokens[i])-1] == '_'):
+                verifica = expressaoLogica(tokensTipos,tokens,i+2)
+                if(verifica[0] == False):
+                    return (False,verifica[1])
+                else:
+                    if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == ')'):
+                        return (True,verifica[1]+1)
+                    else:
+                        return (False,verifica[1])
+            else:
+                return (False,i)
+        else:
+            return (True,i+1)
+    else:
+        return (False,i)
+
+    #----------
+
+#----------
+
+def expressaoLogica(tokensTipos,tokens,i):
+    verifica = expressaoAritmetica(tokensTipos,tokens,i)
+    if(verifica[0] == False):
+        return (False,i)
+    else:
+        if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == '<operadorLogico>'):
+            return expressaoAritmetica(tokensTipos,tokens,verifica[1]+1)
+        else:
+            return (False,verifica[1])
+
+    #----------
+
+#----------
+
+def expressaoAritmetica(tokensTipos,tokens,i):
+    verifica = expressaoOperando(tokensTipos,tokens,i)
+    if(verifica[0] == False):
+        return (False,verifica[1])
+    else:
+        if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == '<operadorAritmetico>'):
+            return expressaoAritmetica(tokensTipos,tokens,verifica[1]+1)
+        else:
+            return (True,verifica[1])
+
+    #----------
+
+#----------
+
+def expressaoOperando(tokensTipos,tokens,i):
+    if(len(tokensTipos) > i and tokensTipos[i] == '<identificador>'):
+        if(len(tokensTipos) > i+1 and tokensTipos[i+1] == '('):
+            if(len(tokensTipos) > i+2 and tokensTipos[i+2] == ')'):
+                return (True,i+3)
+            else:
+                verifica = expressaoParametrosFuncao(tokensTipos,tokens,i+2)
+                if(verifica[0] == False):
+                    return (False,verifica[1])
+                else:
+                    if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == ')'):
+                        return (True,verifica[1]+1)
+                    else:
+                        return (False,verifica[1])
+        else:
+            return (True,i+1)
+    elif(len(tokensTipos) > i and tokensTipos[i] == '<numero>'):
+        return (True,i+1)
+    elif(len(tokensTipos) > i and tokensTipos[i] == '('):
+        verifica = expressaoAritmetica(tokensTipos,tokens,i+1)
+        if(verifica[0] == False):
+            return (False,verifica[1])
+        else:
+            if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == ')'):
+                return (True,verifica[1]+1)
+            else:
+                return (False,verifica[1])
+    else:
+        return (False,i)
+
+    #----------
+
+#----------
+
+def expressaoParametrosFuncao(tokensTipos,tokens,i):
+    verifica = expressaoAritmetica(tokensTipos,tokens,i)
+    if(verifica[0] == False):
+        return (False,verifica[1])
+    else:
+        if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == ','):
+            return expressaoParametrosFuncao(tokensTipos,tokens,verifica[1]+1)
+        else:
+            return (True,verifica[1])
 
     #----------
 
