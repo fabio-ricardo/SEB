@@ -1,19 +1,65 @@
 #coding: utf-8
 import gdal, osgeo, time, numpy, sys, math, os
 from gdalconst import *
-from constantes import *
-
+from constantes_MODIS import *
 #Pega os dados da imagem
 class AbreImagem():
-	def __init__(self,nomeArquivoEntrada, algNome):
-		self.driver = gdal.GetDriverByName('GTiff')
-		self.driver.Register()
-		self.extensao = '.tif'
-		self.entrada = gdal.Open(nomeArquivoEntrada,GA_ReadOnly)
-		if  self.entrada is None:
-			print 'Erro ao abrir o arquivo: ' + nomeArquivoEntrada
-			sys.exit(1)
+	
+	def tif(self):
+		self.entrada = gdal.Open(self.nomeArquivoEntrada,GA_ReadOnly)
+		self.setLinhas(self.entrada.RasterYSize)
+		self.setColunas(self.entrada.RasterXSize)
+	
+	def hdf(self):
+		aux = gdal.Open(self.nomeArquivoEntrada)
+		subdatasets = numpy.array(aux.GetSubDatasets())
+		a1, a2 = subdatasets.shape
 		
+		for n in xrange(a1):
+			if '1km Surface Reflectance Band' in subdatasets[n][0]:
+				b = gdal.Open(subdatasets[n][0], GA_ReadOnly)
+				b = b.GetRasterBand(1).ReadAsArray().astype(numpy.float32)
+				rows, cols = b.shape
+				self.setLinhas(rows)
+				self.setColunas(cols)
+				b = None
+				break
+		self.entrada = self.driver.Create(self.pastaSaida+self.nomeArquivoEntrada,cols,rows,self.NBandas+6,GDT_Float32)
+		for k in xrange(n,n+7):
+			#print 'Extraindo banda: ',k-n+1
+			banda = self.entrada.GetRasterBand(k-n+1)
+			saida = gdal.Open(subdatasets[k][0], GA_ReadOnly)
+			banda.WriteArray(saida.GetRasterBand(1).ReadAsArray().astype(numpy.float32),0,0)
+			saida = None
+			banda = None
+		for n in xrange(a1):
+			if subdatasets[n][0][-3:] == ':31':
+				#print 'Extraindo banda: 31'
+				banda = self.entrada.GetRasterBand(8)
+				saida = gdal.Open(subdatasets[n][0], GA_ReadOnly)
+				banda.WriteArray(saida.GetRasterBand(1).ReadAsArray().astype(numpy.float32),0,0)
+				#print 'Extraindo banda: 32'
+				banda = self.entrada.GetRasterBand(9)
+				saida = gdal.Open(subdatasets[n+1][0], GA_ReadOnly)
+				banda.WriteArray(saida.GetRasterBand(1).ReadAsArray().astype(numpy.float32),0,0)
+				break
+			elif subdatasets[n][0][-3:] == ':17':
+				#print 'Extraindo banda: 17'
+				banda = self.entrada.GetRasterBand(10)
+				saida = gdal.Open(subdatasets[n][0], GA_ReadOnly)
+				banda.WriteArray(saida.GetRasterBand(1).ReadAsArray().astype(numpy.float32),0,0)
+				#print 'Extraindo banda: 18'
+				banda = self.entrada.GetRasterBand(11)
+				saida = gdal.Open(subdatasets[n+1][0], GA_ReadOnly)
+				banda.WriteArray(saida.GetRasterBand(1).ReadAsArray().astype(numpy.float32),0,0)
+				#print 'Extraindo banda: 19'
+				banda = self.entrada.GetRasterBand(12)
+				saida = gdal.Open(subdatasets[n+2][0], GA_ReadOnly)
+				banda.WriteArray(saida.GetRasterBand(1).ReadAsArray().astype(numpy.float32),0,0)
+				n += 3
+			
+	def __init__(self,nomeArquivoEntrada, algNome):
+		self.nomeArquivoEntrada = nomeArquivoEntrada
 		self.pastaSaida = algNome+'__'+nomeArquivoEntrada+'/'
 		
 		try:
@@ -21,22 +67,40 @@ class AbreImagem():
 		except:
 			print 'Diretorio: ' + self.pastaSaida + ' Já existe.'
 			print 'Recriando arquivos, se existir.'
+		self.NBandas = 7
+		self.driver = gdal.GetDriverByName('GTiff')
+		self.driver.Register()
+		self.extensao = '.tif'
+		
+		exec('self.'+nomeArquivoEntrada[-3:]+'()')
+		
+		if  self.entrada is None:
+			print 'Erro ao abrir o arquivo: ' + nomeArquivoEntrada
+			sys.exit(1)
+		
 		print 'linhas:',self.getLinhas(),' colunas:',self.getColunas(),'bandas:',self.getBandas(),'driver:',self.getDriverEntrada().ShortName
 	
 	def getEntrada(self):
 		return self.entrada
 	
+	
+	def setLinhas(self, rows):
+		self.rows = rows
+	
+	def setColunas(self, cols):
+		self.cols = cols
+	
 	def getLinhas(self):
-		return self.entrada.RasterYSize
+		return self.rows
 	
 	def getColunas(self):
-		return self.entrada.RasterXSize
+		return self.cols
 	
 	def getDriverEntrada(self):
 		return self.entrada.GetDriver()
 	
 	def getBandas(self):
-		return self.entrada.RasterCount
+		return self.NBandas
 	
 	def getProjecao(self):	
 		return self.entrada.GetProjection()
@@ -49,7 +113,17 @@ class AbreImagem():
 		saida.SetProjection(self.getProjecao())
 		return saida, saida.GetRasterBand(1)
 	
-	def saidaImagem(self,nome, banda, calculo,i, j):
+	def saidaImagem(self,nome, banda, saida, calculo,i, j):
+		'''
+		saida2 = self.driver.Create(self.pastaSaida+nome+'_'+self.extensao,self.getColunas(), self.getLinhas(),1,GDT_Float32)
+		saida2.SetProjection(self.getProjecao())
+		band2 = saida2.GetRasterBand(1)
+			
+		band2.WriteArray(calculo, j , i)
+		band2.SetNoDataValue(Valores.noValue)
+		if os.path.exists(self.pastaSaida+nome+self.extensao):
+			os.remove(self.pastaSaida+nome+self.extensao)
+		'''
 		banda.WriteArray(calculo, j , i)
 		banda.SetNoDataValue(Valores.noValue)
 		print nome + ' - Pronto!'
@@ -100,12 +174,13 @@ class Valores():
 
 #Salva as imagens obtidas pelos cálculos
 class SalvaImagens():
-	def __init__(self, nome, algNome,fracao):
+	def __init__(self, nome, algNome,fracao, fracao2):
 		self.img = AbreImagem(nome, algNome)	
 		self.linhas = self.img.getLinhas()
 		self.colunas = self.img.getColunas()
 		self.fracao = fracao
-	
+		self.fracao2 = fracao2
+		
 		self.saidaNDVI, self.bandaNDVI = self.img.criaImagem('ndvi', self.linhas, self.colunas)
 		self.saidaSAVI, self.bandaSAVI = self.img.criaImagem('savi', self.linhas, self.colunas)
 		self.saidaIAF,self.bandaIAF = self.img.criaImagem('iaf', self.linhas, self.colunas)
@@ -119,11 +194,11 @@ class SalvaImagens():
 		self.saidaEvap, self.bandaEvap = self.img.criaImagem('evapotranspiração24h', self.linhas, self.colunas)
 	
 	def EscreveTudo(self,Ta, UR, Z, julianDay):
-		formulas = Formulas( Ta, UR, Z, julianDay)
-		formulas.setBandasSaida(self.saidaNDVI,self.bandaNDVI, self.saidaSAVI, self.bandaSAVI, self.saidaIAF,self. bandaIAF, self.saidaAlbedo, 
+		formulas = Formulas( Ta, UR, Z, julianDay, self.img)
+		formulas.setBandasSaida(self.saidaNDVI,self.bandaNDVI, self.saidaSAVI, self.bandaSAVI, self.saidaIAF,self.bandaIAF, self.saidaAlbedo, 
 		self.bandaAlbedoSuper,self.saidaTemp, self.bandaTempSuper,self.saidaRad, self.bandaSaldoRad, self.saidaFluxo, self.bandaFluxo, self.saidaFracao, self.bandaFracao,
 		self.saidaCalSen, self.bandaCalSen, self.saidaCalLat, self.bandaCalLat,self.saidaEvap, self.bandaEvap)
-		
+
 		for i in xrange(0,self.linhas,self.yBlockSize):
 			if i + self.yBlockSize < self.linhas:
 				lerLinhas = self.yBlockSize
@@ -138,20 +213,21 @@ class SalvaImagens():
 				
 				formulas.reflectanciaParte1(self.img.getBandas())
 				formulas.reflectanciaParte2(self.img.getBandas(),self.img.getEntrada(), j, i, lerColunas, lerLinhas)
-				formulas.fazCalculos(self.fracao, i, j, lerLinhas, lerColunas)
-				self.img.saidaImagem('ndvi',self.bandaNDVI,formulas.getNDVI(), i, j)
-				self.img.saidaImagem('savi',self.bandaSAVI,formulas.getSAVI(), i, j)
-				self.img.saidaImagem('iaf', self.bandaIAF, formulas.getIAF(), i, j)
-				self.img.saidaImagem('albedoSuperficie', self.bandaAlbedoSuper, formulas.getAlbedoSuper(), i, j)
-				self.img.saidaImagem('temperaturaSuperficie',self.bandaTempSuper, formulas.getTemperaturaSuperficie(), i, j)
-				self.img.saidaImagem('saldoRadiacao',self.bandaSaldoRad, formulas.getSaldoRadiacao(), i, j)
-				self.img.saidaImagem('fluxoCalSolo',self.bandaFluxo, formulas.getFluxoCalSolo(), i, j)
+				formulas.fazCalculos(self.fracao, self.fracao2, i, j, lerLinhas, lerColunas)
+				self.img.saidaImagem('ndvi', self.bandaNDVI, self.saidaNDVI,formulas.getNDVI(), i, j)
+				self.img.saidaImagem('savi', self.bandaSAVI, self.saidaSAVI,formulas.getSAVI(), i, j)
+				self.img.saidaImagem('iaf', self.bandaIAF, self.saidaIAF, formulas.getIAF(), i, j)
+				self.img.saidaImagem('albedoSuperficie', self.bandaAlbedoSuper, self.saidaAlbedo, formulas.getAlbedoSuper(), i, j)
 				
-				self.img.saidaImagem('fracaoEvaporativa', self.bandaFracao, formulas.getFracaoEvaporativa(), i, j)
+				self.img.saidaImagem('temperaturaSuperficie',self.bandaTempSuper,self.saidaTemp, formulas.getTemperaturaSuperficie(), i, j)
+				self.img.saidaImagem('saldoRadiacao', self.bandaSaldoRad, self.saidaRad, formulas.getSaldoRadiacao(), i, j)
+				self.img.saidaImagem('fluxoCalSolo', self.bandaFluxo, self.saidaFluxo, formulas.getFluxoCalSolo(), i, j)
+				
+				self.img.saidaImagem('fracaoEvaporativa', self.bandaFracao, self.saidaFracao, formulas.getFracaoEvaporativa(), i, j)
 
-				self.img.saidaImagem('fluxoCalorSensivel', self.bandaCalSen, formulas.getFluxoCalorSensivel(), i,j )
-				self.img.saidaImagem('fluxoCalorLatente',self.bandaCalLat, formulas.getFluxoCalorLatente(), i,j)
-				self.img.saidaImagem('evapotranspiracao24h',self.bandaEvap, formulas.getEvapotranspiracao24h(), i,j)
+				self.img.saidaImagem('fluxoCalorSensivel', self.bandaCalSen, self.saidaCalSen, formulas.getFluxoCalorSensivel(), i,j )
+				self.img.saidaImagem('fluxoCalorLatente', self.bandaCalLat, self.saidaCalLat, formulas.getFluxoCalorLatente(), i,j)
+				self.img.saidaImagem('evapotranspiração24h',self.bandaEvap,self.saidaEvap, formulas.getEvapotranspiracao24h(), i,j)
 				formulas.passoFinal()
 					
 		self.saidaNDVI = self.bandaNDVI = None
@@ -165,26 +241,29 @@ class SalvaImagens():
 		self.saidaCalSen = self.bandaCalSen = None
 		self.saidaCalLat = self.bandaCalLat = None
 		self.saidaEvap = self.bandaEvap = None
+		if os.path.exists(self.img.pastaSaida+self.img.nomeArquivoEntrada):
+			os.remove(self.img.pastaSaida+self.img.nomeArquivoEntrada)
 		img = None
 		formulas = None
 		
-	def setBlockSize(self, xBlockSize, yBlockSize):
+	def setBlockSize(self, yBlockSize, xBlockSize):
 		self.xBlockSize = xBlockSize
 		self.yBlockSize = yBlockSize
 		
 	def setFullSize(self):
-		self.xBlockSize = self.img.getLinhas()
-		self.yBlockSize = self.img.getColunas()
+		self.xBlockSize = self.img.getColunas()
+		self.yBlockSize = self.img.getLinhas()
 
 #Todas as fórmulas utilizadas
 class Formulas():
-	def __init__(self, Ta, UR, Z, julianDay):
+	def __init__(self, Ta, UR, Z, julianDay, img):
 		 self.valores = Valores()
 		 self.valores.setTa(Ta)
 		 self.valores.setUR(UR)
 		 self.valores.setZ(Z)
 		 self.valores.setJulianDay(julianDay)
 		 self.albedoSupMax = 0
+		 self.img = img
 		 
 	
 	def setBandasSaida(self, saidaNDVI,bandaNDVI, saidaSAVI, bandaSAVI, saidaIAF, bandaIAF, saidaAlbedo, bandaAlbedoSuper,
@@ -216,7 +295,7 @@ class Formulas():
 	def reflectanciaParte1(self,NBandas):
 		self.p1 = numpy.zeros([NBandas+1],dtype=numpy.float32)
 		for k in xrange(1,NBandas+1):
-			if (k != 6):
+			if (k != 6) or self.img.nomeArquivoEntrada[-3:].lower() == 'hdf':
 				self.p1[k] = self.valores.pi / (descBandas[k][5] * self.valores.cosZ * self.valores.dr)
 	
 	def reflectanciaParte2(self,NBandas,entrada, j, i, lerColunas, lerLinhas):
@@ -225,7 +304,6 @@ class Formulas():
 		for k in xrange(1,NBandas+1):
 			dados[k] = entrada.GetRasterBand(k).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
 			radiancia = descBandas[k][3] + (descBandas[k][6] * dados[k])
-
 			if (k == 2):
 				self.mask = dados[k-1] == dados[k]
 				dados[k-1] = None
@@ -238,7 +316,7 @@ class Formulas():
 			if(k >= 2):
 				dados[k] = None
 
-			if(k != 6):
+			if(k != 6) or self.img.nomeArquivoEntrada[-3:].lower()== 'hdf':
 				reflectancia = self.p1[k] * radiancia
 
 				self.albedoPlanetario += descBandas[k][7] * reflectancia
@@ -249,7 +327,10 @@ class Formulas():
 					self.reflectanciaB3 = reflectancia
 				elif(k == 4):
 					self.reflectanciaB4 = reflectancia
-
+				elif(k == 1):
+					self.reflectanciaB1 = reflectancia
+				elif (k==2):
+					self.reflectanciaB2 = reflectancia
 				reflectancia = None
 			else:
 				self.radianciaB6 = radiancia
@@ -260,18 +341,23 @@ class Formulas():
 		dados = None
 		#self.entrada = None
 	
-	def fazCalculos(self, fracao,i, j, lerLinhas, lerColunas):	
-		self.setNdvi()
+	def fazCalculos(self, fracao, fracao2,i, j, lerLinhas, lerColunas):	
+
+		exec('self.setNdvi'+self.img.nomeArquivoEntrada[-3:].lower()+'()')
 		self.setSavi()
 		self.setIaf()
 		self.albedoSuper()
 		self.enb_e_e0()
-		self.tempSuper()
+		exec('self.tempSuper'+self.img.nomeArquivoEntrada[-3:].lower()+'('+str(i)+','+str(j)+','+str(lerLinhas)+','+str(lerColunas)+')')
 		self.setSaldoRadiacao()
 		self.setFluxoCalSolo()
-		exec(fracao)
+		exec(fracao+'('+str(i)+','+str(j)+','+str(lerLinhas)+','+str(lerColunas)+')')
+		exec(fracao2)
 	
-	def setNdvi(self):
+	def setNdvihdf(self):
+		self.ndvi = numpy.choose(self.mask, (self.valores.noValue, (self.reflectanciaB2 - self.reflectanciaB1) / (self.reflectanciaB2 + self.reflectanciaB1)))
+	
+	def setNdvitif(self):
 		self.ndvi = numpy.choose(self.mask, (self.valores.noValue, (self.reflectanciaB4 - self.reflectanciaB3) / (self.reflectanciaB4 + self.reflectanciaB3)))
 
 	def getNDVI(self):
@@ -303,7 +389,6 @@ class Formulas():
 		if numpy.amax(self.albedoSuperficie) > self.albedoSupMax:
 			self.albedoSupMax = numpy.amax(self.albedoSuperficie)
 		self.albedoPlanetario = None
-		
 	def getAlbedoSuper(self):
 		return self.albedoSuperficie
 		
@@ -317,22 +402,64 @@ class Formulas():
 		self.ENB = numpy.choose(self.mask1, (self.ENB, 0.99))
 		self.E0 = numpy.choose(self.mask1, (self.E0, 0.985))
 		self.mask1 = None
-	
-	def tempSuper(self):
+		
+	def tempSupertif(self, i, j,lerLinhas, lerColunas):
 		self.temperaturaSuperficie = numpy.choose(self.mask, (self.valores.noValue, self.valores.K2 / numpy.log(((self.ENB * self.valores.K1) / self.radianciaB6) + 1.0)))
 		self.radianciaB6 = None
 		self.ENB = None
+	
+	def tempSuperhdf(self, i,j ,lerLinhas, lerColunas):
+		numpy.seterr(all='ignore')
+		#Radiancia
+		T31 =  -1.3250003015 + ((26.2000005725+1.3250003015)/32767)*self.img.entrada.GetRasterBand(8).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
+		T32 =  -1.2099998176 + ((22.7000145484+1.2099998176)/32767)*self.img.entrada.GetRasterBand(9).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
+		G17 = -2.4265276381 + ((248.4159162245+2.4265276381)/32767)*self.img.entrada.GetRasterBand(10).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
+		G18 = -2.8239951529 + ((289.1066775101+2.8239951529)/32767)*self.img.entrada.GetRasterBand(11).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
+		G19 = -2.2822969783 + ((233.6502935587+2.2822969783)/32767)*self.img.entrada.GetRasterBand(12).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
+		G2  = 0 + ((326.828903877-0)/32767)*self.img.entrada.GetRasterBand(2).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
+		
+		#Temperatura
+		T31 = 1304.4/(numpy.log((self.ENB*729.57/T31)+1))
+		T32 = 1197.0/(numpy.log((self.ENB*474.71/T32)+1))
+		G17 = G17/G2
+		G18 = G18/G2
+		G19 = G19/G2
+		
+		self.driver = gdal.GetDriverByName('GTiff')
+		self.driver.Register()
+		'''
+		saida = self.driver.Create('temp31.tif',1354,2030,1,GDT_Float32)
+		banda = saida.GetRasterBand(1)
+		banda.WriteArray(T31,0,0)
+		
+		saida = self.driver.Create('temp31.tif',1354,2030, 1,GDT_Float32)
+		banda = saida.GetRasterBand(1)
+		banda.WriteArray(T31,0,0)'''
+		
+		
+		W17 = 26.314 - 54.434*G17 + 28.449*G17*G17
+		W18 = 5.012 - 23.017*G18 + 27.884*G18*G18
+		W19 = 9.446 - 26.887*G19 + 19.914*G19*G19
+		
+		W = 0.192*W17 + 0.453*W18 + 0.355*W19
+		e = (0.989+0.988)/2
+		de = 0.989 - 0.988
+		
+		#Split das temperaturas
+		self.temperaturaSuperficie = 0.97 + 0.13*W + (1.0 + (0.112 + 0.006*W)*((1 - e)/e) + (-0.52 + 0.02*W)*(de/(e*e)))*((T31+T32)/2) + (9.98 -0.32*W + (-36.15 -0.42*W)*((1-e)/e) + (130.8 -10.72*W)*(de/(e*e)))*((T31-T32)/2)
+		self.radianciaB6 = None
+		self.ENB = None
+		numpy.seterr(all='warn')
 	
 	def getTemperaturaSuperficie(self):
 		return self.temperaturaSuperficie
 	
 	def radOndaLongaEmi(self):
-		return (self.E0 * self.valores.constSB) * numpy.power(self.temperaturaSuperficie,4)
+		return numpy.power(self.temperaturaSuperficie,4)*(self.E0 * self.valores.constSB)
 		
 		
 	def setSaldoRadiacao(self):
-		self.saldoRadiacao = numpy.choose(self.mask, (self.valores.noValue, ((1.0 - self.albedoSuperficie) * self.valores.radOndaCurtaInci) +\
-                                    (self.E0 * self.valores.radOndaLongaInci - self.radOndaLongaEmi())))
+		self.saldoRadiacao = numpy.choose(self.mask, (self.valores.noValue, (self.E0 * self.valores.radOndaLongaInci - self.radOndaLongaEmi()) + ((1.0 - self.albedoSuperficie) * self.valores.radOndaCurtaInci)))
 		
 		self.E0 = None  
   	
@@ -382,15 +509,16 @@ class Formulas():
 		limSupDir = numpy.zeros([self.valores.qtdPontos],dtype=numpy.float32)
 		limInfDir = numpy.zeros([self.valores.qtdPontos],dtype=numpy.float32)
 		limDirPVez = True
-		albedoSuperficie = self.bandaAlbedoSuper.ReadAsArray(j,i,lerColunas,lerLinhas)
-		temperaturaSuperficie = self.bandaTempSuper.ReadAsArray(j,i,lerColunas,lerLinhas)
+		albedoSuperficie = self.getAlbedoSuper()
+		temperaturaSuperficie = self.getTemperaturaSuperficie()
 		maskAlbedoSuper = numpy.logical_and(albedoSuperficie <= (self.albedoSupMax * 0.2), albedoSuperficie != self.valores.noValue)
 		limiteLadoEsq = temperaturaSuperficie[maskAlbedoSuper]
 		maskAlbedoSuper = albedoSuperficie >= (self.albedoSupMax * 0.8)
 		limiteLadoDir = temperaturaSuperficie[maskAlbedoSuper]
 		maskAlbedoSuper = None
 		albedoSuperficie = None
-		temperaturaSuperficie = None
+		temperaturaSuperficieSaida = None
+		
 		self.mask1 = limiteLadoEsq != self.valores.noValue
 		limiteLadoEsq = limiteLadoEsq[self.mask1]
 		self.mask1 = limiteLadoDir != self.valores.noValue
@@ -430,14 +558,15 @@ class Formulas():
 		m2 = (self.limInfDir - self.limInfEsq) / x2x1
 		c1 = ((x2 * self.limSupEsq) - (x1 * self.limSupDir)) / x2x1
 		c2 = ((x2 * self.limInfEsq) - (x1 * self.limInfDir)) / x2x1
-		self.fracaoEvaporativa = numpy.choose(self.mask, (self.valores.noValue, (c1 + (m1 * self.getAlbedoSuper()) - self.temperaturaSuperficie)/((c1 - c2) + ((m1 - m2) * self.getAlbedoSuper()))))
+		
+		self.fracaoEvaporativa = numpy.choose(self.mask, (self.valores.noValue, (c1 + (m1 * self.getAlbedoSuper()) - self.getTemperaturaSuperficie())/((c1 - c2) + ((m1 - m2) * self.getAlbedoSuper()))))
 
-	def fracaoEvaporativaSSEB(self):
+	def fracaoEvaporativaSSEB(self, *args):
 		hotNdvi = numpy.array([],dtype=numpy.float32)
 		coldTemp = numpy.array([],dtype=numpy.float32)
 		coldNdvi = numpy.array([],dtype=numpy.float32)
 		hotTemp = numpy.array([],dtype=numpy.float32)
-		tempSuperficie = self.temperaturaSuperficie
+		tempSuperficie = self.getTemperaturaSuperficie()
 		tempSuperficie.reshape(-1)
 		ndvi_aux = self.getNDVI()
 		ndvi_aux.reshape(-1)
@@ -494,24 +623,24 @@ class Formulas():
 		coldTemp = numpy.sort(coldTemp)
 		TH = numpy.mean(hotTemp[-3:])
 		TC = numpy.mean(coldTemp[:3])
-		self.fracaoEvaporativa = numpy.choose(self.mask, (self.valores.noValue, (TH - self.temperaturaSuperficie) / (TH - TC)))
+		self.fracaoEvaporativa = numpy.choose(self.mask, (self.valores.noValue, (TH - self.getTemperaturaSuperficie()) / (TH - TC)))
 		
 		
 class SSEBI():
 	def __init__(self,nome, Ta, UR, Z, julianDay):
-		self.a = SalvaImagens(nome, 'S-SEBI','self.fracaoEvaporativaSSEBI(i, j, lerLinhas, lerColunas)\nself.fracao()')
+		self.a = SalvaImagens(nome, 'S-SEBI','self.fracaoEvaporativaSSEBI', 'self.fracao()')
 		self.a.setFullSize()
 		self.a.EscreveTudo(Ta, UR, Z, julianDay)
 		
 class SSEBI_Block():
 	def __init__(self,nome, Ta, UR, Z, julianDay):
-		self.a = SalvaImagens(nome, 'S-SEBI_Block','self.fracaoEvaporativaSSEBI(i, j, lerLinhas, lerColunas)\nself.fracao()')
+		self.a = SalvaImagens(nome, 'S-SEBI_Block','self.fracaoEvaporativaSSEBI','self.fracao()')
 		self.a.setBlockSize(256,256)
 		self.a.EscreveTudo(Ta, UR, Z, julianDay)
 		
 class SSEB():
 	def __init__(self,nome, Ta, UR, Z, julianDay):
-		self.a = SalvaImagens(nome, 'SSEB', 'self.fracaoEvaporativaSSEB()')
+		self.a = SalvaImagens(nome, 'SSEB', 'self.fracaoEvaporativaSSEB', '\n')
 		self.a.setFullSize()
 		self.a.EscreveTudo(Ta, UR, Z, julianDay)
 			
@@ -519,22 +648,26 @@ class SSEB():
 if __name__== '__main__': 
 	inicio = time.time()
 	#Instancia-se o algoritmo desejado e passa parâmetros
-
+	numpy.seterr(all='ignore')
+	
 	Ta = 32.74
 	UR = 36.46
 	Z = 50.24
 	julianDay = 248.0
-	
-	a = SSEBI('empilhada1000x1000.tif', Ta, UR, Z, julianDay)
+	nome = 'MOD09.A2014332.0915.005.NRT.hdf'
+	#nome = 'empilhada1000x1000.tif'
+	a = SSEBI(nome, Ta, UR, Z, julianDay)
+	fim = time.time()
+	print 'Tempo total: '+str(fim - inicio)+' segundos.'
+	'''
+	inicio = time.time()
+	a = SSEBI_Block(nome, Ta, UR, Z, julianDay)
 	fim = time.time()
 	print 'Tempo total: '+str(fim - inicio)+' segundos.'
 	
 	inicio = time.time()
-	a = SSEBI_Block('empilhada1000x1000.tif', Ta, UR, Z, julianDay)
+	a = SSEB(nome, Ta, UR, Z, julianDay)
 	fim = time.time()
-	print 'Tempo total: '+str(fim - inicio)+' segundos.'
 	
-	inicio = time.time()
-	a = SSEB('empilhada1000x1000.tif', Ta, UR, Z, julianDay)
-	fim = time.time()
-	print 'Tempo total: '+str(fim - inicio)+' segundos.'
+	numpy.seterr(all='warn')
+	print 'Tempo total: '+str(fim - inicio)+' segundos.'''
