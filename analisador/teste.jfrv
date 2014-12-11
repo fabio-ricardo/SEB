@@ -1,0 +1,61 @@
+a()
+julianDay=248.0
+Z=50.24
+latitude=-16.56
+Rg_24h=243.95
+Uref=0.9207136
+P=299.3
+UR=36.46
+Ta=32.74
+reflectanciaAtmosfera=0.03
+Kt=1.0
+L=0.1
+K1=607.76
+K2=1260.56
+S=1367.0
+StefanBoltzman=5.67E-8
+Tao_24h=0.63
+
+dr = 1.0 + 0.033 * cos(julianDay * 2 * pi / 365)
+cosZ = cos(((90.0 - Z) * pi) / 180.0)
+declinacaoSolar = radians(23.45 * sin(radians(360.0 * (julianDay - 80) / 365)))
+anguloHorarioNascerSol = acos(-tan(pi * latitude / 180.0) * tan(declinacaoSolar))
+rad_solar_toa = 24.0 * 60.0 * 0.082 * dr * (anguloHorarioNascerSol * sin(pi * latitude / 180.0) * sin(declinacaoSolar) + cos(pi * latitude / 180.0) * cos(declinacaoSolar) * sin(anguloHorarioNascerSol)) / pi
+Rg_24h_mj = 0.0864 * Rg_24h
+transmissividade24h = Rg_24h_mj / rad_solar_toa
+ea = (0.61078 * exp(17.269 * Ta / (237.3 + Ta))) * UR / 100
+W = 0.14 * ea * P + 2.1
+transmissividade = 0.35 + 0.627 * exp((-0.00146 * P / (Kt * cosZ)) - 0.075 * pow((W / cosZ), 0.4))
+emissivityAtm = 0.625 * pow((1000.0 * ea / (Ta + T0)), 0.131)
+SWd = (S * cosZ * cosZ) / (1.085 * cosZ + 10.0 * ea * (2.7 + cosZ) * 0.001 + 0.2)
+LWdAtm = emissivityAtm * StefanBoltzman * (pow(Ta + T0, 4))
+
+rad_espectral = coef_calib_a + ((coef_calib_b - coef_calib_a) / 255.0) * pixel
+reflectancia = (pi * rad_espectral) / (irrad_espectral * cosZ * dr)
+O_albedo = (sumBandas - reflectanciaAtmosfera) / (transmissividade * transmissividade)
+O_NDVI = (bandaRefletida4 - bandaRefletida3) / (bandaRefletida4 + bandaRefletida3)
+O_SAVI = ((1.0 + L) * (bandaRefletida4 - bandaRefletida3)) / (L + bandaRefletida4 + bandaRefletida3)
+O_IAF = (-ln((0.69 - SAVI) / 0.59) / 0.91)
+O_IAF_(SAVI <= 0.1) = 0
+O_IAF_(SAVI >= 0.687) = 6
+O_emissividadeNB = 0.97 + 0.0033 * IAF
+O_emissividadeNB_(IAF >= 3) = 0.98
+O_emissividadeNB_(NDVI <= 0) = 0.99
+O_emissivity = 0.95 + 0.01 * IAF
+O_emissivity_(IAF >= 3) = 0.98
+O_emissivity_(NDVI <= 0) = 0.985
+O_Ts = K2/ln(((emissividadeNB * K1) / banda6) + 1.0)
+O_LWd = emissivity * StefanBoltzman * (pow(Ts, 4))
+O_Rn = ((1.0 - albedo) * SWd) + (emissivity * (LWdAtm) - LWd)
+O_G0 = Rn * (((Ts - T0) / albedo) * (0.0038 * albedo + 0.0074 * albedo * albedo) * (1.0 - 0.98 * pow(NDVI, 4)))
+index = (0.5) * ((2.0 * bandaRefletida4 + 1) - sqrt((pow((2 * bandaRefletida4 + 1), 2) - 8 * (bandaRefletida4 - bandaRefletida3))))
+O_z0m=exp(-5.809+5.62*SAVI)
+O_SWnet=(1.0 - albedo) * SWd
+O_U_star= k * Uref / ln(z200 / z0m)
+O_r_ah=ln(z2 / z1) / (U_star * k)
+O_H = p * cp * (b + a * (Ts - T0)) / r_ah
+O_LE = Rn - H - G0
+O_evap_fr = LE / (Rn - G0)
+O_Rn_24h= Rg_24h * (1.0 - albedo) - 110.0 * Tao_24h
+O_LE_24h= evap_fr * Rn_24h
+O_ET_24h = (evap_fr * Rn_24h * 86.4) / 2450.0
