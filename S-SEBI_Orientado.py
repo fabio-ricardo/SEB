@@ -1,7 +1,7 @@
 #coding: utf-8
 import gdal, osgeo, time, numpy, sys, math, os
 from gdalconst import *
-from constantes_MODIS import *
+
 #Pega os dados da imagem
 class AbreImagem():
 	
@@ -43,20 +43,6 @@ class AbreImagem():
 				saida = gdal.Open(subdatasets[n+1][0], GA_ReadOnly)
 				banda.WriteArray(saida.GetRasterBand(1).ReadAsArray().astype(numpy.float32),0,0)
 				break
-			elif subdatasets[n][0][-3:] == ':17':
-				#print 'Extraindo banda: 17'
-				banda = self.entrada.GetRasterBand(10)
-				saida = gdal.Open(subdatasets[n][0], GA_ReadOnly)
-				banda.WriteArray(saida.GetRasterBand(1).ReadAsArray().astype(numpy.float32),0,0)
-				#print 'Extraindo banda: 18'
-				banda = self.entrada.GetRasterBand(11)
-				saida = gdal.Open(subdatasets[n+1][0], GA_ReadOnly)
-				banda.WriteArray(saida.GetRasterBand(1).ReadAsArray().astype(numpy.float32),0,0)
-				#print 'Extraindo banda: 19'
-				banda = self.entrada.GetRasterBand(12)
-				saida = gdal.Open(subdatasets[n+2][0], GA_ReadOnly)
-				banda.WriteArray(saida.GetRasterBand(1).ReadAsArray().astype(numpy.float32),0,0)
-				n += 3
 			
 	def __init__(self,nomeArquivoEntrada, algNome):
 		self.nomeArquivoEntrada = nomeArquivoEntrada
@@ -114,16 +100,6 @@ class AbreImagem():
 		return saida, saida.GetRasterBand(1)
 	
 	def saidaImagem(self,nome, banda, saida, calculo,i, j):
-		'''
-		saida2 = self.driver.Create(self.pastaSaida+nome+'_'+self.extensao,self.getColunas(), self.getLinhas(),1,GDT_Float32)
-		saida2.SetProjection(self.getProjecao())
-		band2 = saida2.GetRasterBand(1)
-			
-		band2.WriteArray(calculo, j , i)
-		band2.SetNoDataValue(Valores.noValue)
-		if os.path.exists(self.pastaSaida+nome+self.extensao):
-			os.remove(self.pastaSaida+nome+self.extensao)
-		'''
 		banda.WriteArray(calculo, j , i)
 		banda.SetNoDataValue(Valores.noValue)
 		print nome + ' - Pronto!'
@@ -413,40 +389,14 @@ class Formulas():
 		#Radiancia
 		T31 =  -1.3250003015 + ((26.2000005725+1.3250003015)/32767)*self.img.entrada.GetRasterBand(8).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
 		T32 =  -1.2099998176 + ((22.7000145484+1.2099998176)/32767)*self.img.entrada.GetRasterBand(9).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
-		G17 = -2.4265276381 + ((248.4159162245+2.4265276381)/32767)*self.img.entrada.GetRasterBand(10).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
-		G18 = -2.8239951529 + ((289.1066775101+2.8239951529)/32767)*self.img.entrada.GetRasterBand(11).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
-		G19 = -2.2822969783 + ((233.6502935587+2.2822969783)/32767)*self.img.entrada.GetRasterBand(12).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
-		G2  = 0 + ((326.828903877-0)/32767)*self.img.entrada.GetRasterBand(2).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
 		
 		#Temperatura
 		T31 = 1304.4/(numpy.log((self.ENB*729.57/T31)+1))
 		T32 = 1197.0/(numpy.log((self.ENB*474.71/T32)+1))
-		G17 = G17/G2
-		G18 = G18/G2
-		G19 = G19/G2
 		
-		self.driver = gdal.GetDriverByName('GTiff')
-		self.driver.Register()
-		'''
-		saida = self.driver.Create('temp31.tif',1354,2030,1,GDT_Float32)
-		banda = saida.GetRasterBand(1)
-		banda.WriteArray(T31,0,0)
-		
-		saida = self.driver.Create('temp31.tif',1354,2030, 1,GDT_Float32)
-		banda = saida.GetRasterBand(1)
-		banda.WriteArray(T31,0,0)'''
-		
-		
-		W17 = 26.314 - 54.434*G17 + 28.449*G17*G17
-		W18 = 5.012 - 23.017*G18 + 27.884*G18*G18
-		W19 = 9.446 - 26.887*G19 + 19.914*G19*G19
-		
-		W = 0.192*W17 + 0.453*W18 + 0.355*W19
-		e = (0.989+0.988)/2
-		de = 0.989 - 0.988
 		
 		#Split das temperaturas
-		self.temperaturaSuperficie = 0.97 + 0.13*W + (1.0 + (0.112 + 0.006*W)*((1 - e)/e) + (-0.52 + 0.02*W)*(de/(e*e)))*((T31+T32)/2) + (9.98 -0.32*W + (-36.15 -0.42*W)*((1-e)/e) + (130.8 -10.72*W)*(de/(e*e)))*((T31-T32)/2)
+		self.temperaturaSuperficie = (T31 + T32)/2
 		self.radianciaB6 = None
 		self.ENB = None
 		numpy.seterr(all='warn')
@@ -654,7 +604,7 @@ if __name__== '__main__':
 	UR = 36.46
 	Z = 50.24
 	julianDay = 248.0
-	nome = 'MOD09.A2014332.0915.005.NRT.hdf'
+	nome = 'MOD09.A2014338.0020.005.NRT.hdf'
 	#nome = 'empilhada1000x1000.tif'
 	a = SSEBI(nome, Ta, UR, Z, julianDay)
 	fim = time.time()
