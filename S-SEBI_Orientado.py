@@ -395,7 +395,9 @@ class Formulas():
 	def setIaf(self):
 		numpy.seterr(all='ignore')
 		self.mask1 = numpy.logical_and(((0.69 - self.savi) / 0.59) > 0, self.mask)
+		#-----#------#
 		self.iaf = numpy.choose(self.mask1, (self.valores.noValue, -1 * (numpy.log((0.69 - self.savi) / 0.59) / 0.91)))
+		#-----#------#
 		self.mask1 = self.savi <= 0.1
 		self.iaf = numpy.choose(self.mask1,(self.iaf, 0.0))
 		self.mask1 = self.savi >= 0.687
@@ -431,7 +433,9 @@ class Formulas():
 		
 	#Sets Temperature for .tif files
 	def tempSupertif(self, i, j,lerLinhas, lerColunas):
+		#-----#------#
 		self.temperaturaSuperficie = numpy.choose(self.mask, (self.valores.noValue, self.valores.K2 / numpy.log(((self.ENB * self.valores.K1) / self.radianciaB6) + 1.0)))
+		#-----#------#
 		self.radianciaB6 = None
 		self.ENB = None
 		
@@ -443,9 +447,10 @@ class Formulas():
 		T32 =  -1.2099998176 + ((22.7000145484+1.2099998176)/32767)*self.img.entrada.GetRasterBand(9).ReadAsArray(j,i,lerColunas,lerLinhas).astype(numpy.float32)
 		
 		#Temperature
+		#-----#------#
 		T31 = 1304.4/(numpy.log((self.ENB*729.57/T31)+1))
 		T32 = 1197.0/(numpy.log((self.ENB*474.71/T32)+1))
-		
+		#-----#------#
 		
 		#Split of temperatures
 		self.temperaturaSuperficie = (T31 + T32)/2
@@ -459,7 +464,9 @@ class Formulas():
 	
 	#Gets Longwave Radiance
 	def radOndaLongaEmi(self):
+		#-----#------#
 		return numpy.power(self.temperaturaSuperficie,4)*(self.E0 * self.valores.constSB)
+		#-----#------#
 		
 	#Sets Total Radiance
 	def setSaldoRadiacao(self):
@@ -474,8 +481,10 @@ class Formulas():
 	#Sets Heat balance on soil
 	def setFluxoCalSolo(self):
 		self.mask1 = self.ndvi < 0
+		#-----#------#
 		self.fluxoCalSolo = numpy.choose(self.mask1, (((self.temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * self.albedoSuperficie))\
 							   * (1.0 - (0.98 * numpy.power(self.ndvi,4)))) * self.saldoRadiacao, self.valores.G * self.saldoRadiacao))
+		#-----#------#
 		self.mask1 = None
 		self.fluxoCalSolo = numpy.choose(self.mask, (self.valores.noValue, self.fluxoCalSolo))
 		
@@ -497,9 +506,10 @@ class Formulas():
 		
 	#Gets Evapotranspiration in a day
 	def getEvapotranspiracao24h(self):
+		#-----#------#
 		return numpy.choose(self.mask, (self.valores.noValue, (self.fracaoEvaporativa * (self.valores.Rg24h * (1.0 - self.albedoSuperficie)\
                                                     - 110.0 * self.valores.Tao24h) * 86.4) / 2450.0))
-	
+		#-----#------#
 	#Free memory
 	def passoFinal(self):
 		self.temperaturaSuperficie = None
