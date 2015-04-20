@@ -18,6 +18,8 @@ def salvar(nomeImagem,retorno,nomesRet,endArquivo,extensaoImg):
         imagem = arcpy.NumPyArrayToRaster(calculo,value_to_nodata=noValue)
         imagem.save(r''+endArquivo+nome+extensaoImg)
 
+        arcpy.DefineProjection_management(r''+endArquivo+nome+extensaoImg, projecao)
+
         return True,1
 
     if(type(retorno) == tuple):
