@@ -114,7 +114,10 @@ def list(request):
             form2 = DocumentForm2()
             form3 = DocumentForm3()
 
-            images = os.listdir('myproject/media/imagem/')
+            try:
+                images = os.listdir('myproject/media/imagem/')
+            except:
+                images = None
 
             return render_to_response(
             'myapp/list.html',
@@ -128,7 +131,12 @@ def list(request):
         form2 = DocumentForm2()
         form3 = DocumentForm3()
         erro = ''
-        images = os.listdir('myproject/media/imagem/')
+
+        try:
+            images = os.listdir('myproject/media/imagem/')
+        except:
+            images = None
+
 
 
     # Render list page with the documents and the form
