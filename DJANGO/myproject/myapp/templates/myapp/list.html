@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Framework SEB</title>
+	</head>
+
+	<body>
+		<p>{{ erro }}</p>
+
+		<!-- List of uploaded documents -->
+		{% if images %}
+			<ul>
+			{% for image in images %}
+				<li><a href="/media/imagem/{{image}}">{{image}}</a></li>
+			{% endfor %}
+			</ul>
+		{% else %}
+			<p>Sem imagens.</p>
+		{% endif %}
+
+		<!-- Upload form. Note enctype attribute! -->
+		<form action="{% url "list" %}" method="post" enctype="multipart/form-data">
+			{% csrf_token %}
+			<p>{{ form.non_field_errors }}</p>
+			<p>{{ form.docfile.label_tag }} {{ form.docfile.help_text }}</p>
+			<p>
+				{{ form.docfile.errors }}
+				{{ form.docfile }}
+			</p>
+
+		 	<p>{{ form2.non_field_errors }}</p>
+			<p>{{ form2.funcfile.label_tag }} {{ form2.funcfile.help_text }}</p>
+			<p>
+				{{ form2.funcfile.errors }}
+				{{ form2.funcfile }}
+			</p>
+
+			<p>{{ form3.non_field_errors }}</p>
+			<p>{{ form3.bandfile.label_tag }} {{ form3.bandfile.help_text }}</p>
+			<p>
+				{{ form3.bandfile.errors }}
+				{{ form3.bandfile }}
+			</p>
+
+			<p><input type="submit" value="Upload" /></p>
+		</form>
+		
+	</body>
+
+</html> 
