@@ -159,7 +159,7 @@ def analisarETransformar(endArquivo,nomeFunc):
 #----------
 
 def executar(codigo,bandas,parametros): # EXECUTA O CODIGO GERADO
-    exec codigo[1]
+    exec(codigo[1],globals())
 
     return eval(codigo[2]+'('+parametros+')')
 
