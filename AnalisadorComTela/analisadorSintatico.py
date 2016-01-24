@@ -6,7 +6,7 @@ numeros = list(['0','1','2','3','4','5','6','7','8','9'])
 caracteresAlfabeto = list(map(chr,range(ord('a'), ord('z') + 1))) +\
                                    list(map(chr,range(ord('A'), ord('Z') + 1)))
 operadoresAritmeticos = list(['*','/','-','+','%'])
-operadoresLogicos = list(['=','<','>','!'])
+operadoresComparacao = list(['=','<','>','!'])
 
 #----------
 
@@ -71,7 +71,7 @@ def analisar(endArquivo):
     elif(len(dadosArq[1]) == 0):
         return False,'Arquivo vazio: '+str(endArquivo)
 
-    tokens = tokenizar(dadosArq[1],operadoresAritmeticos+list(['(',')',','])+operadoresLogicos)
+    tokens = tokenizar(dadosArq[1],operadoresAritmeticos+list(['(',')',','])+operadoresComparacao)
 
     tokensTipos = validarTipos(tokens)
     if(tokensTipos[0] == False):
@@ -88,7 +88,14 @@ def validarTipos(tokens):
 
     i = 0
     while(i < len(tokensTipos)):
-        if(tokensTipos[i][0] in (caracteresAlfabeto + list('_'))):
+        if(tokensTipos[i][0] == 'a' and len(tokensTipos[i]) > 1 and tokensTipos[i][1] == 'n' and len(tokensTipos[i]) > 2 and tokensTipos[i][2] == 'd'\
+           and len(tokensTipos[i]) == 3):
+            tokensTipos[i] = '<operadorLogico>'
+            tokens[i] = ' and '
+        elif(tokensTipos[i][0] == 'o' and len(tokensTipos[i]) > 1 and tokensTipos[i][1] == 'r' and len(tokensTipos[i]) == 2):
+            tokensTipos[i] = '<operadorLogico>'
+            tokens[i] = ' or '
+        elif(tokensTipos[i][0] in (caracteresAlfabeto + list('_'))):
             if(tokensTipos[i][0] == 'O' and len(tokensTipos[i]) > 1 and tokensTipos[i][1] == '_'):
                 if(len(tokensTipos[i]) > 2):
                     if(tokensTipos[i][2] == '_' and len(tokensTipos[i]) == 3 and len(tokensTipos) > i and tokensTipos[i+1] == '('):
@@ -181,17 +188,17 @@ def validarTipos(tokens):
                 del tokensTipos[i+1]
             else:
                 tokensTipos[i] = '<operadorAritmetico>'
-        elif(tokensTipos[i][0] in operadoresLogicos):
+        elif(tokensTipos[i][0] in operadoresComparacao):
             if((len(tokensTipos) > i+1) and ((tokensTipos[i][0] == '<' and tokensTipos[i+1][0] == '=')\
                     or (tokensTipos[i][0] == '>' and tokensTipos[i+1][0] == '=')\
                     or (tokensTipos[i][0] == '!' and tokensTipos[i+1][0] == '=')\
                     or (tokensTipos[i][0] == '=' and tokensTipos[i+1][0] == '='))):
                 tokens[i] = tokens[i]+tokens[i+1]
-                tokensTipos[i] = '<operadorLogico>'
+                tokensTipos[i] = '<operadorComparacao>'
                 del tokens[i+1]
                 del tokensTipos[i+1]
             elif(tokensTipos[i][0] != '='):
-                tokensTipos[i] = '<operadorLogico>'
+                tokensTipos[i] = '<operadorComparacao>'
         else:
             if(not (tokensTipos[i][0] in list(['(',')',',','\n']))):
                 return False,i
@@ -314,12 +321,19 @@ def expressaoRecebe(tokensTipos,tokens,i):
     if(len(tokensTipos) > i and tokensTipos[i] == '<identificador>'):
         if(len(tokensTipos) > i+1 and tokensTipos[i+1] == '('):
             if(tokens[i][len(tokens[i])-1] == '_'):
-                verifica = expressaoLogica(tokensTipos,tokens,i+2)
+                verifica = expressaoAritmetica(tokensTipos,tokens,i+2)
                 if(verifica[0] == False):
                     return (False,verifica[1])
                 else:
-                    if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == ')'):
-                        return (True,verifica[1]+1)
+                    if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == ','):
+                        verifica = expressaoAritmetica(tokensTipos,tokens,verifica[1]+1)
+                        if(verifica[0] == False):
+                            return (False,verifica[1])
+                        else:
+                            if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == ')'):
+                                return (True,verifica[1]+1)
+                            else:
+                                return (False,verifica[1])
                     else:
                         return (False,verifica[1])
             else:
@@ -333,20 +347,6 @@ def expressaoRecebe(tokensTipos,tokens,i):
 
 #----------
 
-def expressaoLogica(tokensTipos,tokens,i):
-    verifica = expressaoAritmetica(tokensTipos,tokens,i)
-    if(verifica[0] == False):
-        return (False,i)
-    else:
-        if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == '<operadorLogico>'):
-            return expressaoAritmetica(tokensTipos,tokens,verifica[1]+1)
-        else:
-            return (False,verifica[1])
-
-    #----------
-
-#----------
-
 def expressaoAritmetica(tokensTipos,tokens,i):
     if(len(tokensTipos) > i and tokensTipos[i] == '<operadorAritmetico>' and (tokens[i] == '+' or tokens[i] == '-')):
         return expressaoAritmetica(tokensTipos,tokens,i+1)
@@ -355,7 +355,8 @@ def expressaoAritmetica(tokensTipos,tokens,i):
         if(verifica[0] == False):
             return (False,verifica[1])
         else:
-            if(len(tokensTipos) > verifica[1] and tokensTipos[verifica[1]] == '<operadorAritmetico>'):
+            if(len(tokensTipos) > verifica[1] and (tokensTipos[verifica[1]] == '<operadorAritmetico>' or tokensTipos[verifica[1]] == '<operadorComparacao>'\
+                                                   or tokensTipos[verifica[1]] == '<operadorLogico>')):
                 return expressaoAritmetica(tokensTipos,tokens,verifica[1]+1)
             else:
                 return (True,verifica[1])

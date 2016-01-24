@@ -1,0 +1,159 @@
+ssebi(banda1,banda2,banda3,banda4,banda5,banda6,banda7)
+
+descBandas11 = 0.45 
+descBandas12 = 0.52 
+descBandas13 = -1.52 
+descBandas14 = 193.0 
+descBandas15 = 1957.0 
+descBandas16 = (descBandas14 - descBandas13) / 255.0 
+
+descBandas21 = 0.52 
+descBandas22 = 0.60 
+descBandas23 = -2.84 
+descBandas24 = 365.0 
+descBandas25 = 1826.0 
+descBandas26 = (descBandas24 - descBandas23) / 255.0 
+
+descBandas31 = 0.63 
+descBandas32 = 0.69 
+descBandas33 = -1.17 
+descBandas34 = 264.0
+descBandas35 = 1554.0
+descBandas36 = (descBandas34 - descBandas33) / 255
+
+descBandas41 = 0.76
+descBandas42 = 0.79
+descBandas43 = -1.51
+descBandas44 = 221.0
+descBandas45 = 1036.0
+descBandas46 = (descBandas44 - descBandas43) / 255.0
+
+descBandas51 = 1.55
+descBandas52 = 1.75
+descBandas53 = -0.37
+descBandas54 = 30.2
+descBandas55 = 215.0
+descBandas56 = (descBandas54 - descBandas53) / 255.0
+
+descBandas61 = 10.4
+descBandas62 = 12.5
+descBandas63 = 1.2378
+descBandas64 = 15.303
+descBandas65 = 0
+descBandas66 = (descBandas64 - descBandas63) / 255.0
+
+descBandas71 = 2.08
+descBandas72 = 2.35
+descBandas73 = -0.15
+descBandas74 = 16.5
+descBandas75 = 80.67
+descBandas76 = (descBandas74 - descBandas73) / 255.0
+
+somatIrradiancia = descBandas15 + descBandas25 + descBandas35 + descBandas45 + descBandas55 + descBandas75
+
+descBandas17 = descBandas15 / somatIrradiancia
+descBandas27 = descBandas25 / somatIrradiancia
+descBandas37 = descBandas35 / somatIrradiancia
+descBandas47 = descBandas45 / somatIrradiancia
+descBandas57 = descBandas55 / somatIrradiancia
+descBandas77 = descBandas75 / somatIrradiancia
+
+noValue = -9999.0
+Z = 40.647
+cosZ = cos((90 - Z) * pi / 180)
+julianDay = 205.0
+dr = 1.0 + 0.033 * cos((julianDay * 2 * pi) / 365)
+ap = 0.03
+Ta = 25.27
+UR = 67.98
+ea = (0.61078 * exp(17.269 * Ta / (237.3 + Ta))) * UR / 100.0
+P = 99.9
+W = 0.14 * ea * P + 2.1
+Kt = 1.0
+tsw = 0.35 + 0.627 * exp((-0.00146 * P / (Kt * cosZ)) - 0.075 * pow((W / cosZ), 0.4))
+p2 = 1.0 / (tsw * tsw)
+L = 0.1
+K1 = 607.76
+K2 = 1260.56
+constSB = 5.67E-8
+S = 1367.0
+T0 = 273.15
+Ea = 0.625 * pow((1000.0 * ea / (Ta + T0)), 0.131)
+radOndaCurtaInci = (S * cosZ * cosZ) / (1.085 * cosZ + 10.0 * ea * (2.7 + cosZ) * 0.001 + 0.2)
+radOndaLongaInci = Ea * constSB * pow(Ta + T0, 4)
+G = 0.5
+Rg24h = 183.8756158
+Tao24h = 0.575066923
+
+p1B1 = pi / (descBandas15 * cosZ * dr)
+p1B2 = pi / (descBandas25 * cosZ * dr)
+p1B3 = pi / (descBandas35 * cosZ * dr)
+p1B4 = pi / (descBandas45 * cosZ * dr)
+p1B5 = pi / (descBandas55 * cosZ * dr)
+p1B7 = pi / (descBandas75 * cosZ * dr)
+
+albedoPlanetario = 0
+
+radiancia = descBandas13 + (descBandas16 * banda1)
+reflectancia = p1B1 * radiancia
+albedoPlanetario = albedoPlanetario + descBandas17 * reflectancia
+
+radiancia = descBandas23 + (descBandas26 * banda2)
+reflectancia = p1B2 * radiancia
+albedoPlanetario = albedoPlanetario + descBandas27 * reflectancia
+
+radiancia = descBandas33 + (descBandas36 * banda3)
+reflectanciaB3 = p1B3 * radiancia
+albedoPlanetario = albedoPlanetario + descBandas37 * reflectanciaB3
+
+radiancia = descBandas43 + (descBandas46 * banda4)
+reflectanciaB4 = p1B4 * radiancia
+albedoPlanetario = albedoPlanetario + descBandas47 * reflectanciaB4
+
+radiancia = descBandas53 + (descBandas56 * banda5)
+reflectancia = p1B5 * radiancia
+albedoPlanetario = albedoPlanetario + descBandas57 * reflectancia
+
+radianciaB6 = descBandas63 + (descBandas66 * banda6)
+
+radiancia = descBandas73 + (descBandas76 * banda7)
+reflectancia = p1B7 * radiancia
+albedoPlanetario = albedoPlanetario + descBandas77 * reflectancia
+
+O_ndvi = (reflectanciaB4 - reflectanciaB3) / (reflectanciaB4 + reflectanciaB3)
+O_savi = ((1 + L) * (reflectanciaB4 - reflectanciaB3)) / (L + (reflectanciaB4 + reflectanciaB3))
+
+O_iaf_(((0.69 - savi) / 0.59) > 0, noValue) = -1 * (log((0.69 - savi) / 0.59) / 0.91)
+
+albedoSuperficie = (albedoPlanetario - ap) * p2
+
+iaf_(savi <= 0.1, iaf) = 0.0
+
+iaf_(savi >= 0.687, iaf) = 6.0
+
+ENB = 0.97 + 0.0033 * iaf
+E0 = 0.95 + 0.01 * iaf
+
+ENB_(iaf >= 3, ENB) = 0.98
+E0_(iaf >= 3, E0) = 0.98
+
+ENB_(ndvi <= 0, ENB) = 0.99
+E0_(ndvi <= 0, E0) = 0.985
+
+O_temperaturaSuperficie = K2 / log((ENB * K1) / radianciaB6) + 1.0
+
+radOndaLongaEmi = (E0 * constSB) * power(temperaturaSuperficie,4)
+
+O_saldoRadiacao = ((1.0 - albedoSuperficie) * radOndaCurtaInci) + (E0 * radOndaLongaInci - radOndaLongaEmi)
+
+O_fluxoCalSolo_(ndvi < 0, (((temperaturaSuperficie - 273.15) * (0.0038 + (0.0074 * albedoSuperficie)) * (1.0 - (0.98 * power(ndvi,4)))) * saldoRadiacao)) = G
+
+
+O_fracaoEvaporativa = fgeo_ssebi(albedoSuperficie, temperaturaSuperficie)
+
+
+O_fluxoCalorSensivel = (1 - fracaoEvaporativa) * (saldoRadiacao - fluxoCalSolo)
+
+O_fluxoCalorLatente = fracaoEvaporativa * (saldoRadiacao - fluxoCalSolo)
+
+O_evapotranspiracao24h = (fracaoEvaporativa * (Rg24h * (1.0 - albedoSuperficie) - 110.0 * Tao24h) * 86.4) / 2450.0
