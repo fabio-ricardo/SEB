@@ -1,12 +1,35 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<meta charset="utf-8">
-		<title>Framework SEB</title>
-	</head>
+{% load staticfiles %}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Framework 2016</title>
+<meta name="keywords" content="" />
+<meta name="description" content="" />
+<!--
 
-	<body>
-		<p>{{ erro }}</p>
+Template 2074 Corporate
+
+http://www.tooplate.com/view/2074-corporate
+
+-->
+<link href="{% static 'css/tooplate_style.css' %}" rel="stylesheet" type="text/css" />
+
+</head>
+<body>
+
+<div id="tooplate_body_wrapper">
+	<div id="tooplate_wrapper">
+        
+        <div id="tooplate_header">
+			<div id='inner'><h1>Uma framework para geoprocessamento</h1></div>
+            <div class="cleaner"></div>
+        </div> <!-- end of tooplate_header -->
+        
+        <div id="tooplate_main">
+        	<div class="cleaner h20"></div>
+            <div id='innerd'>
+				<p>{{ erro }}</p>
 
 		<!-- List of uploaded documents -->
 		{% if images %}
@@ -46,6 +69,29 @@
 			<p><input type="submit" value="Upload" /></p>
 		</form>
 		
-	</body>
+		
+            <div class="cleaner h20"></div>
 
-</html> 
+            
+            </div>
+        	<div class="cleaner"></div>
+            
+        </div>
+        
+        <div id="tooplate_main_bottom"></div>
+        
+        <div id="tooplate_bottom">
+            <div class="cleaner"></div>
+        </div>
+               
+    </div> <!-- end of tooplate_wrapper -->
+    
+    <div id="tooplate_footer_wrapper">
+        <div id="tooplate_footer">
+        Framework 2016
+        </div> <!-- end of tooplate_footer -->
+    </div> <!-- end of tooplate_footer_wrapper -->
+</div> <!-- end of tooplate_body_wrapper -->
+
+</body>
+</html>
